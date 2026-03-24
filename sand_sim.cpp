@@ -16,10 +16,46 @@ constexpr auto SAND_PIT_CELL_X_VELOCITY_MASK = 0b1111100000;
 constexpr auto SAND_PIT_CELL_X_VELOCITY_SHIFT = 5;
 constexpr auto SAND_PIT_CELL_Y_VELOCITY_MASK = 0b111110000000000;
 constexpr auto SAND_PIT_CELL_Y_VELOCITY_SHIFT = 10;
-constexpr auto SAND_PIT_CELL_X_LOSS_NUMERATOR_MASK = 0b111000000000000000;
-constexpr auto SAND_PIT_CELL_X_LOSS_NUMERATOR_SHIFT = 15;
-constexpr auto SAND_PIT_CELL_Y_LOSS_NUMERATOR_MASK = 0b111000000000000000000;
-constexpr auto SAND_PIT_CELL_Y_LOSS_NUMERATOR_SHIFT = 18;
+
+constexpr auto SAND_PIT_CELL_LIST_HEAD_FLAG_MASK = 0b1000000000000000;
+constexpr auto SAND_PIT_CELL_LIST_HEAD_FLAG_SHIFT = 15;
+constexpr auto SAND_PIT_CELL_LIST_NEXT_IDX_MASK = 0b1111111111111111111111110000000000000000;											// We can support 72 screens of 1920 * 1080 3x3 grains.
+constexpr auto SAND_PIT_CELL_LIST_NEXT_IDX_SHIFT = 16;
+constexpr auto SAND_PIT_CELL_LIST_PREV_IDX_MASK = 0b1111111111111111111111110000000000000000000000000000000000000000;
+constexpr auto SAND_PIT_CELL_LIST_PREV_IDX_SHIFT = 40;
+
+inline void SandPitCell_SetListHeadFlag(SandPitCell* cell, bool state) {
+	if (state == true) {
+		*cell |= SAND_PIT_CELL_LIST_HEAD_FLAG_MASK;
+	}
+	else {
+		*cell &= ~SAND_PIT_CELL_LIST_HEAD_FLAG_MASK;
+	}
+}
+
+inline bool SandPitCell_IsListHead(SandPitCell cell) {
+	return cell & SAND_PIT_CELL_LIST_HEAD_FLAG_MASK;
+}
+
+inline std::uint32_t SandPitCell_GetNextIdx(SandPitCell cell) {
+	return (cell & SAND_PIT_CELL_LIST_NEXT_IDX_MASK) >> SAND_PIT_CELL_LIST_NEXT_IDX_SHIFT;
+}
+
+inline void SandPitCell_SetNextIdx(SandPitCell* cell, std::uint32_t next) {
+	*cell &= SAND_PIT_CELL_LIST_NEXT_IDX_MASK;
+	auto fixed_next = next & (SAND_PIT_CELL_LIST_NEXT_IDX_MASK >> SAND_PIT_CELL_LIST_NEXT_IDX_SHIFT);
+	*cell |= fixed_next << SAND_PIT_CELL_LIST_NEXT_IDX_SHIFT;
+}
+
+inline std::uint32_t SandPitCell_GetPrevIdx(SandPitCell cell) {
+	return (cell & SAND_PIT_CELL_LIST_PREV_IDX_MASK) >> SAND_PIT_CELL_LIST_PREV_IDX_SHIFT;
+}
+
+inline void SandPitCell_SetPrevIdx(SandPitCell* cell, std::uint32_t prev) {
+	*cell &= SAND_PIT_CELL_LIST_PREV_IDX_MASK;
+	auto fixed_next = prev & (SAND_PIT_CELL_LIST_PREV_IDX_MASK >> SAND_PIT_CELL_LIST_PREV_IDX_SHIFT);
+	*cell |= fixed_next << SAND_PIT_CELL_LIST_PREV_IDX_SHIFT;
+}
 
 inline TWO_BIT_ID SandPitCell_GetId(SandPitCell cell) {
 	return cell & SAND_PIT_CELL_ID_MASK;
@@ -55,14 +91,6 @@ inline void SandPitCell_SetYVelocity(SandPitCell* cell, int32_t v) {
     *cell |= (fixed_v << SAND_PIT_CELL_Y_VELOCITY_SHIFT);
 }
 
-inline int SandPitCell_GetXLossNumerator(SandPitCell cell) {
-	return (cell & SAND_PIT_CELL_X_LOSS_NUMERATOR_MASK) >> SAND_PIT_CELL_X_LOSS_NUMERATOR_SHIFT ;
-}
-
-inline int SandPitCell_GetYLossNumerator(SandPitCell cell) {
-	return (cell & SAND_PIT_CELL_Y_LOSS_NUMERATOR_MASK) >> SAND_PIT_CELL_Y_LOSS_NUMERATOR_SHIFT ;
-}
-
 inline SandPitCell SandPitCell_Create(TWO_BIT_ID id, bool simulate_flag, std::int32_t x_vel, std::int32_t y_vel) {
 	SandPitCell result = 0;
 	result |= (id % 4) << SAND_PIT_CELL_ID_SHIFT;
@@ -77,20 +105,19 @@ void SandPit_Create(
 	SandPit& pit, 
 	std::uint32_t w, 
 	std::uint32_t h, 
+	std::uint32_t num_screens_horizontal, 
+	std::uint32_t num_screens_vertical, 
 	std::uint32_t stubbornness, 
 	std::int16_t grain_x
-)
-{
-	// Allocate and Zero sand world.
-	auto world_bytes = sizeof(SandPitCell) * w * h;
-	auto* world = (SandPitCell*)(malloc(world_bytes));
+) {
+	pit.num_screens_horizontal = num_screens_horizontal;
+	pit.num_screens_vertical = num_screens_vertical;
 
+	auto* world = (SandPitCell*)(malloc(sizeof(SandPitCell*) * num_screens_horizontal * num_screens_vertical * w * h));
 	pit.world = world;
-	pit.w = w;
-	pit.h = h;
+	pit.w = num_screens_horizontal * w;
+	pit.h = num_screens_vertical * h;
 	pit.stubbornness = stubbornness;
-
-	SandPit_Clear(pit);
 }
 
 void SandPit_Destroy(SandPit& pit)
@@ -108,7 +135,11 @@ bool SandPit_IsInBounds(const SandPit& pit, std::uint32_t x, std::uint32_t y) {
 	return (x >= 0 && x < pit.w) && (y >= 0 && y < pit.h);
 }
 
-SandPitCell SandPit_Get(SandPit& pit, std::uint32_t x, std::uint32_t y) {
+SandPitCell& SandPit_Get(SandPit& pit, std::uint32_t x, std::uint32_t y) {
+	return pit.world[y * pit.w + x];
+}
+
+const SandPitCell& SandPit_Get(const SandPit& pit, std::uint32_t x, std::uint32_t y) {
 	return pit.world[y * pit.w + x];
 }
 
@@ -120,10 +151,6 @@ void SandPit_ClearCell(SandPit& pit, std::uint32_t x, std::uint32_t y) {
 	pit.world[y * pit.w + x] &= ~SAND_PIT_CELL_PARTICLE_PRESENT_MASK;
 }
 
-const SandPitCell& SandPit_Get(const SandPit& pit, std::uint32_t x, std::uint32_t y) {
-	return pit.world[y * pit.w + x];
-}
-
 // Returns true if (x, y) is out-of-bounds.
 bool SandPit_IsCellOccupied(const SandPit& pit, std::uint32_t x, std::uint32_t y) {
 	if (!SandPit_IsInBounds(pit, x, y))
@@ -133,9 +160,36 @@ bool SandPit_IsCellOccupied(const SandPit& pit, std::uint32_t x, std::uint32_t y
 	return SandPitCell_GetParticlePresent(grain);
 }
 
+inline std::uint32_t SandPit_CoordsToIndex(SandPit& pit, std::uint32_t x, std::uint32_t y) {
+	return y * pit.w + x;
+}
+
 void SandPit_PlaceGrain(SandPit& pit, std::uint32_t x, std::uint32_t y, int particle_id) {
-	if (SandPit_IsInBounds(pit, x, y))
-		SandPit_Set(pit, x, y, SandPitCell_Create(particle_id, pit.simulate_tick, 0, 0));
+	if (!SandPit_IsInBounds(pit, x, y))
+		return;
+
+	auto grain = SandPitCell_Create(particle_id, pit.simulate_tick, 0, 0);
+	auto grain_index = SandPit_CoordsToIndex(pit, x, y);
+	if (pit.sand_head == nullptr) {
+		SandPitCell_SetListHeadFlag(&grain, true);
+		SandPitCell_SetNextIdx(&grain, grain_index);
+		SandPitCell_SetPrevIdx(&grain, grain_index);
+		pit.sand_head = &SandPit_Get(pit, x, y);
+	}
+	else {
+		auto* head = pit.sand_head;
+
+		// Insert new particle
+		auto head_next_index = SandPitCell_GetNextIdx(*head);
+		auto* head_next = &pit.world[head_next_index];
+		auto head_index = SandPitCell_GetPrevIdx(*head_next);
+		SandPitCell_SetNextIdx(&grain, head_next_index);
+		SandPitCell_SetPrevIdx(&grain, head_index);
+		SandPitCell_SetPrevIdx(head_next, grain_index);
+		SandPitCell_SetNextIdx(head, grain_index);
+	}
+
+	SandPit_Set(pit, x, y, grain);
 }
 
 void SandPitCell_MarkAsSimulated(SandPitCell* grain, bool simulate_tick) {
@@ -172,29 +226,13 @@ void SandPit_DoCollisions(std::uint32_t x, std::uint32_t y, SandPit& pit, std::u
 	if (SandPit_IsInBounds(pit, next_x, next_y)) {
 		SandPitCell grain_ptr = grain;
 		SandPitCell collision = SandPit_Get(pit, next_x, next_y);
-		grain_ptr &= ~SAND_PIT_CELL_X_LOSS_NUMERATOR_MASK;
-		grain_ptr &= ~SAND_PIT_CELL_Y_LOSS_NUMERATOR_MASK;
 		int collisions = 1;
 		while (SandPitCell_GetParticlePresent(collision)) {
-			auto x_loss = 0; 
-			auto y_loss = 0; 
-			auto x_loss_numerator = SandPitCell_GetXLossNumerator(grain_ptr);
-			auto y_loss_numerator = SandPitCell_GetYLossNumerator(grain_ptr);
-			if (x_loss_numerator >= 4) {
-				grain_ptr &= ~SAND_PIT_CELL_X_LOSS_NUMERATOR_MASK;
-				x_loss_numerator = 0;
-				x_loss = Bounds(SandPitCell_GetXVelocity(grain_ptr), 1, -1);
-			}
-			else if (y_loss_numerator >= 4) {
-				grain_ptr &= ~SAND_PIT_CELL_Y_LOSS_NUMERATOR_MASK;
-				y_loss_numerator = 0;
-				y_loss = Bounds(SandPitCell_GetYVelocity(grain_ptr), 1, -1);
-			}
-
 			auto grain_x_loss = 0l;
 			auto grain_y_loss = 0l;
 			auto collision_x_loss = 0l;
 			auto collision_y_loss = 0l;
+
 			auto grain_x_vel = SandPitCell_GetXVelocity(grain_ptr);
 			auto grain_y_vel = SandPitCell_GetYVelocity(grain_ptr);
 			auto collision_x_vel = SandPitCell_GetXVelocity(collision);
@@ -209,12 +247,6 @@ void SandPit_DoCollisions(std::uint32_t x, std::uint32_t y, SandPit& pit, std::u
 			SandPitCell_SetYVelocity(&collision, grain_y_vel - collision_y_loss);
 			SandPitCell_SetXVelocity(&grain_ptr, collision_x_vel - grain_x_loss);
 			SandPitCell_SetYVelocity(&grain_ptr, collision_y_vel - grain_y_loss);
-
-			collision &= ~SAND_PIT_CELL_X_LOSS_NUMERATOR_MASK;
-			collision &= ~SAND_PIT_CELL_Y_LOSS_NUMERATOR_MASK;
-			collision |= (x_loss_numerator + 1) << SAND_PIT_CELL_X_LOSS_NUMERATOR_SHIFT;
-			collision |= (y_loss_numerator + 1) << SAND_PIT_CELL_Y_LOSS_NUMERATOR_SHIFT;
-
 			SandPit_Set(pit, x, y, grain_ptr);
 			SandPit_Set(pit, next_x, next_y, collision);
 

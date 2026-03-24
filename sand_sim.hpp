@@ -13,8 +13,11 @@ struct SandPit {
 	bool simulate_tick{};		
 	std::uint32_t w{};			
 	std::uint32_t h{};
+	std::uint32_t num_screens_horizontal{};			
+	std::uint32_t num_screens_vertical{};
 	std::int32_t grain_size{};			// The side of a square grain in pixels. Signed to prevent many later conversions.
-	std::uint32_t stubbornness{};		// The height a pillar of sand might reach before it collapses.
+	std::uint32_t stubbornness{};		// The height a pillar of sand can reach before it collapses.
+	SandPitCell* sand_head{};
 	SandPitCell* world;
 };
 
@@ -22,6 +25,8 @@ void SandPit_Create(
 	SandPit& pit, 
 	std::uint32_t w, 
 	std::uint32_t h, 
+	std::uint32_t num_screens_horizontal, 
+	std::uint32_t num_screens_vertical, 
 	std::uint32_t stubbornness, 
 	std::int16_t grain_size
 );
@@ -54,7 +59,6 @@ bool SandPit_AnyInRegion(
 	std::uint32_t w, 
 	std::uint32_t h
 );
-
 struct SandPitQueryResult {
 	std::uint32_t x0{};
 	std::uint32_t y0{};

@@ -15,23 +15,26 @@ constexpr std::uint32_t kPitWidth{ kWindowWidth / kSandS };
 constexpr std::uint32_t kPitHeight{ kWindowHeight / kSandS };
 
 void Init(SandPit* p) {
-	SandPit_Create(*p, kPitWidth, kPitHeight, kSandStubbornness, kSandS);
+	SandPit_Create(*p, kPitWidth, kPitHeight, 1, 1, kSandStubbornness, kSandS);
 }
 
 void Shutdown(SandPit* p) {
 	SandPit_Destroy(*p);
 }
 
-void DrawSandPit(const SandPit& pit) {
+void DrawSandPit(const SandPit& pit, std::uint32_t player_x, std::uint32_t player_y) {
 	constexpr static Color particleColours[]{
 		Color{243, 227, 124, 255},
 		Color{232, 225, 74, 255},
 		Color{234, 202, 74, 255},
 		Color{253, 221, 88, 255}
 	};
+
+	auto start_x = ((player_x / kSandS) / kPitWidth) * kPitWidth;
+	auto start_y = ((player_y / kSandS) / kPitHeight) * kPitHeight;
 	for (int x = 0; x < kPitWidth; x++) {
 		for (int y = 0; y < kPitHeight; y++) {
-			auto id = SandPit_GetIdAt(pit, x, y);
+			auto id = SandPit_GetIdAt(pit, start_x + x, start_y + y);
 
 			if (id != PARTICLE_NOT_PRESENT) 
 				DrawRectangle(x * kSandS, kWindowHeight - (y * kSandS + kSandS), kSandS, kSandS, particleColours[id]);
@@ -87,15 +90,19 @@ int main()
 		ClearBackground(BLACK);
 		DrawFPS(20, 20);
 
+		auto player_x = (int)player.x;
+		auto player_y = (int)player.y;
+		auto start_x = ((int)player_x / kWindowWidth) * kWindowWidth;
+		auto start_y = ((int)player_y / kWindowHeight) * kWindowHeight;
 		// Draw Player
 		Rectangle player_rect = { 
-			player.x - (player.w / 2), 
-			kWindowHeight - (player.y + player.h), 
+			(player_x - start_x) - (player.w / 2), 
+			kWindowHeight - ((player_y - start_y) + player.h), 
 			player.w, player.h 
 		};
 		DrawRectangleRec(player_rect, RED);
 
-		DrawSandPit(pit);
+		DrawSandPit(pit, player.x, player.y);
 		EndDrawing();
 	}
 
