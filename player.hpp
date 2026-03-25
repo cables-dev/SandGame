@@ -8,6 +8,7 @@ constexpr auto PLAYER_HORIZONTAL_SLOW_SPEED = 1200.0;
 constexpr auto PLAYER_HORIZONTAL_SLOW_SPEED_THRESH = 0.03 * PLAYER_HORIZONTAL_SLOW_SPEED;
 constexpr auto PLAYER_MAX_SPEED = 1500.0;
 constexpr auto PLAYER_JUMP_SPEED = 300.0;
+constexpr auto PLAYER_JUMP_EPSILON = kSandS / 2.0;
 constexpr auto PLAYER_JUMP_SPEED_BOOST_X = 40.0;
 constexpr auto G = 900.0;
 

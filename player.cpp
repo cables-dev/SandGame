@@ -8,7 +8,7 @@ void PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r)
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_PlaceGrain(*p, x + i_x, y + i_y, rand() % 4);
+				SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4);
 			}
 		}
 	}
@@ -18,7 +18,7 @@ void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_AddImpulse(*p, x + i_x, y + i_y, (i_x > 0) ? -1 : 1, (i_y > 0) ? -1 : 1);
+				SandPit_AddImpulse(p, x + i_x, y + i_y, (i_x > 0) ? -1 : 1, (i_y > 0) ? -1 : 1);
 			}
 		}
 	}
@@ -28,7 +28,7 @@ void BlowSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, std::i
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_AddImpulse(*p, x + i_x, y + i_y, v_x, v_y);
+				SandPit_AddImpulse(p, x + i_x, y + i_y, v_x, v_y);
 			}
 		}
 	}
@@ -98,6 +98,9 @@ void DoPlayerMovement(Player* player, SandPit* world, bool left, bool right, boo
 	else if (jump) {
 		SetPlayerYVelocity(player, PLAYER_JUMP_SPEED);
 		IncrementPlayerXVelocity(player, (player->x_speed > 0) ? PLAYER_JUMP_SPEED_BOOST_X * dt: -PLAYER_JUMP_SPEED_BOOST_X * dt);
+		// If our framerate is too high we will not move far enough to leave the ground,
+		// so we give the player a little extra nudge.
+		player->y += PLAYER_JUMP_EPSILON;
 	}
 
 	player->y += player->y_speed * dt;
