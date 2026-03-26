@@ -7,8 +7,9 @@ constexpr auto PLAYER_HORIZONTAL_SPEED = 700.0;
 constexpr auto PLAYER_HORIZONTAL_SLOW_SPEED = 1200.0;
 constexpr auto PLAYER_HORIZONTAL_SLOW_SPEED_THRESH = 0.03 * PLAYER_HORIZONTAL_SLOW_SPEED;
 constexpr auto PLAYER_MAX_SPEED = 1500.0;
+constexpr auto PLAYER_AUTO_JUMP_HEIGHT = 3.0;
 constexpr auto PLAYER_JUMP_SPEED = 300.0;
-constexpr auto PLAYER_JUMP_EPSILON = kSandS / 2.0;
+constexpr auto PLAYER_JUMP_EPSILON = SAND_SIZE / 2.0;
 constexpr auto PLAYER_JUMP_SPEED_BOOST_X = 40.0;
 constexpr auto G = 900.0;
 
@@ -19,17 +20,21 @@ enum PlayerFireType {
 };
 
 struct Player {
-	double x{};
-	double y{};
-	int w{};
-	int h{};
+	AABB bbox{};
 	double x_speed{};
 	double y_speed{};
 	bool do_jump{};
 	PlayerFireType fire_mode{};
 };
 
-void UpdatePlayer(
+void Player_Create(
+	Player* player,
+	double player_x,
+	double player_y,
+	double player_w,
+	double player_h
+);
+void Player_UpdatePlayer(
 	Player* player,
 	SandPit* world,
 	bool left,
@@ -43,6 +48,3 @@ void UpdatePlayer(
 	float dt
 );
 
-void PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r);
-void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r);
-void BlowSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, std::int32_t v_x, std::int32_t v_y);

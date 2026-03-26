@@ -4,36 +4,6 @@
 #include <utility>
 #include <cstdlib>
 
-void PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
-	for (auto i_x = -r; i_x < r; i_x++) {
-		for (auto i_y = -r; i_y < r; i_y++) {
-			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4);
-			}
-		}
-	}
-}
-
-void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
-	for (auto i_x = -r; i_x < r; i_x++) {
-		for (auto i_y = -r; i_y < r; i_y++) {
-			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_AddImpulse(p, x + i_x, y + i_y, (i_x > 0) ? -1 : 1, (i_y > 0) ? -1 : 1);
-			}
-		}
-	}
-}
-
-void BlowSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, std::int32_t v_x, std::int32_t v_y) {
-	for (auto i_x = -r; i_x < r; i_x++) {
-		for (auto i_y = -r; i_y < r; i_y++) {
-			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_AddImpulse(p, x + i_x, y + i_y, v_x, v_y);
-			}
-		}
-	}
-}
-
 PlayerFireType NextFireType(PlayerFireType type) {
 	return (PlayerFireType)((type + 1) % FIRE_TYPE_MAX);
 }
@@ -77,82 +47,133 @@ void DoPlayerMovement(Player* player, SandPit* world, bool left, bool right, boo
 		ApplyPlayerFriction(player, dt);
 	}
 
-	auto projected_player_x = player->x + player->x_speed * dt;
-	auto sand_query = SandPit_QueryRegion(world, (projected_player_x - player->w / 2) / kSandS, (player->y + player->h) / kSandS, player->w / kSandS, player->h / kSandS);
+	auto player_bbox_sand_coords = player->bbox;
+	AABB_ScaleByReciprocal(&player_bbox_sand_coords, world->grain_size);
+	auto player_w_sand = AABB_GetWidth(&player_bbox_sand_coords);
+	auto player_h_sand = AABB_GetHeight(&player_bbox_sand_coords);
 
-	// Can we autowalk over this?
-	if (sand_query.highest_grain_y != -1 && sand_query.highest_grain_y - (player->y / kSandS) < ((player->h * 0.7) / kSandS)) {
-		player->x = projected_player_x;
-		player->y = sand_query.highest_grain_y * kSandS;
-	}
-	else if (sand_query.highest_grain_y == -1) {
-		player->x = projected_player_x;
-	}
-	else {
+	double player_x_sand = 0;
+	double player_y_sand = 0;
+	AABB_GetCornerCoords(&player_bbox_sand_coords, AABB_BOTTOM, &player_x_sand, &player_y_sand);
+	double prev_player_x_sand = player_x_sand;
+	double prev_player_y_sand = player_y_sand;
+
+	auto projected_player_x_sand = player_x_sand + (player->x_speed / world->grain_size) * dt;
+	auto sand_query = SandPit_QueryRegion(world, (projected_player_x_sand - player_w_sand / 2), (player_y_sand + player_h_sand), player_w_sand, player_h_sand);
+
+	if (sand_query.any_solid) {		// Did we collide with a wall?
+		// Collide with wall
 		SetPlayerXVelocity(player, 0.0);
 	}
+	else if (sand_query.any_grain) {		// Did we intersect with a piece of sand?
+		// Can we autowalk over it?
+		auto overhead_sand_difference = sand_query.highest_grain_y - player_y_sand;
+		if (overhead_sand_difference < PLAYER_AUTO_JUMP_HEIGHT) {
+			player_y_sand = sand_query.highest_grain_y;
+			player_x_sand = projected_player_x_sand;
+		}
+		else {
+			// Collide with wall
+			SetPlayerXVelocity(player, 0.0);
+		}
+	}
+	else {
+		player_x_sand = projected_player_x_sand;
+	}
 
-	auto is_falling = player->y > 0 && (sand_query.grain_count == 0);
+	auto is_falling = player_y_sand > 0 && (sand_query.grain_count + sand_query.solid_count == 0);
 	if (is_falling)
 		IncrementPlayerYVelocity(player, -G * dt);
 	else if (jump) {
 		SetPlayerYVelocity(player, PLAYER_JUMP_SPEED);
-		IncrementPlayerXVelocity(player, (player->x_speed > 0) ? PLAYER_JUMP_SPEED_BOOST_X * dt: -PLAYER_JUMP_SPEED_BOOST_X * dt);
+		IncrementPlayerXVelocity(player, (player->x_speed > 0) ? PLAYER_JUMP_SPEED_BOOST_X * dt : -PLAYER_JUMP_SPEED_BOOST_X * dt);
 		// If our framerate is too high we will not move far enough to leave the ground,
 		// so we give the player a little extra nudge.
-		player->y += PLAYER_JUMP_EPSILON;
+		player_y_sand += PLAYER_JUMP_EPSILON * world->grain_size;
 	}
 
-	player->y += player->y_speed * dt;
-	player->y = std::max(player->y, (double)LOWEST_Y_COORDINATE);				// Prevent from falling under the map 
+	player_y_sand += (player->y_speed / world->grain_size) * dt;
 
 	// Snap y coordinate if we are intersecting with sand 
-	auto sand_query_top = SandPit_QueryRegion(world, (player->x - player->w / 2) / kSandS, (player->y + player->h) / kSandS, player->w / kSandS, 2);
-	auto sand_query_bottom = SandPit_QueryRegion(world, (player->x - player->w / 2) / kSandS, (player->y) / kSandS, player->w / kSandS, 1);
-	if (!jump && sand_query_bottom.highest_grain_y != -1 && sand_query_top.highest_grain_y == -1) {
+	auto sand_query_top = SandPit_QueryRegion(world, (player_x_sand - player_w_sand / 2), (player_y_sand + player_h_sand + 2), player_w_sand, player_h_sand );
+	auto sand_query_bottom = SandPit_QueryRegion(world, (player_x_sand - player_w_sand / 2), player_y_sand, player_w_sand, 1);
+
+	// Hitting our head
+	if (sand_query_top.any_solid) {
 		SetPlayerYVelocity(player, 0.0);
-		player->y = sand_query_bottom.highest_grain_y * kSandS + kSandS;
+		player_y_sand = std::min(player_y_sand - 2, (sand_query_top.lowest_solid_y - player_h_sand));
+	} else if (!jump && (sand_query_bottom.any_grain || sand_query_bottom.any_solid)) {	
+		SetPlayerYVelocity(player, 0.0);
+		player_y_sand = std::max(sand_query_bottom.highest_grain_y, sand_query_bottom.highest_solid_y) + 1;
 	}
+
+	player_y_sand = std::max(player_y_sand, (double)(LOWEST_Y_COORDINATE / world->grain_size));				// Prevent from falling under the map 
+	if (player_x_sand - player_w_sand / 2.0 <= 0) {
+		player_x_sand = player_w_sand / 2.0;
+		SetPlayerXVelocity(player, 0.0);
+	}
+	if (player_x_sand + player_w_sand / 2.0 >= world->w) {
+		player_x_sand = world->w - player_w_sand / 2.0;
+		SetPlayerXVelocity(player, 0.0);
+	}
+
+	auto dx = player_x_sand - prev_player_x_sand;
+	auto dy = player_y_sand - prev_player_y_sand;
+	AABB_MoveBy(&player->bbox, dx * world->grain_size, dy * world->grain_size);
 }
 
 void DoPlayerFireSand(Player* player, SandPit* world, bool fire_held, bool fire_press, bool switch_fire_mode, int mouse_x, int mouse_y) {
 	if (switch_fire_mode) {
 		player->fire_mode = NextFireType(player->fire_mode);
 	}
+	if (!fire_held && !fire_press)
+		return;
 
-	bool lhs = mouse_x < (player->x);
-	auto sand_x = (lhs) ? (player->x - player->w) : (player->x + player->w);
-	auto sand_y = (player->y + kSandS * 4);
-	auto sight_vec_x = (double)mouse_x - (double)player->x;
-	auto sight_vec_y = (double)mouse_y - (double)player->y;
+	mouse_x /= world->grain_size;
+	mouse_y /= world->grain_size;
+	
+	auto player_bbox_sand_coords = player->bbox;
+	AABB_ScaleByReciprocal(&player_bbox_sand_coords, world->grain_size);
+	auto player_w_sand = AABB_GetWidth(&player_bbox_sand_coords);
+	auto player_h_sand = AABB_GetHeight(&player_bbox_sand_coords);
 
-	if (sight_vec_y > 0 && sight_vec_x <= 0 && sight_vec_x > -200) {
-		sight_vec_x = -200;
+	double player_x_sand = 0;
+	double player_y_sand = 0;
+	AABB_GetCornerCoords(&player_bbox_sand_coords, AABB_BOTTOM, &player_x_sand, &player_y_sand);
+
+	bool lhs = mouse_x < (player_x_sand);
+	auto sand_x = (lhs) ? (player_x_sand - player_w_sand) : (player_x_sand + player_w_sand);
+	auto sand_y = (player_y_sand + 4);
+	auto sight_vec_x = (double)mouse_x - (double)player_x_sand;
+	auto sight_vec_y = (double)mouse_y - (double)player_y_sand;
+
+	if (sight_vec_y > 0 && sight_vec_x <= 0 && sight_vec_x > -80) {
+		sight_vec_x = -80;
 	}
-	else if (sight_vec_y > 0 && sight_vec_x >= 0 && sight_vec_x < 200) {
-		sight_vec_x = 200;
+	else if (sight_vec_y > 0 && sight_vec_x >= 0 && sight_vec_x < 80) {
+		sight_vec_x = 80;
 	}
 	auto sight_vec_mag = sqrt(sight_vec_x * sight_vec_x + sight_vec_y * sight_vec_y);
 	auto unit_x = sight_vec_x / sight_vec_mag;
 	auto unit_y = sight_vec_y / sight_vec_mag;
 	if (player->fire_mode == FIRE_TYPE_STREAM && fire_held) {
-		PlaceSandCircle(world, sand_x / kSandS, sand_y / kSandS, 1);
+		PlaceSandCircle(world, sand_x, sand_y, 1);
 		BlowSand(
 			world,
-			sand_x / kSandS,
-			sand_y / kSandS,
+			sand_x,
+			sand_y,
 			2,
 			unit_x * 8,
 			unit_y * 8
 		);
 	}
 	else if (player->fire_mode == FIRE_TYPE_BURST && fire_press) {
-		auto x_offset = (lhs) ? -(int)(kSandS * 7) : (int)kSandS * 7;
-		PlaceSandCircle(world, (sand_x + x_offset) / kSandS, sand_y / kSandS, 6);
+		auto x_offset = (lhs) ? -7 : 7;
+		PlaceSandCircle(world, (sand_x + x_offset), sand_y, 6);
 		BlowSand(
 			world,
-			(sand_x + x_offset) / kSandS,
-			(sand_y + 2 * kSandS)/ kSandS,
+			(sand_x + x_offset),
+			sand_y,
 			8,
 			unit_x * 12,
 			unit_y * 12 
@@ -160,7 +181,15 @@ void DoPlayerFireSand(Player* player, SandPit* world, bool fire_held, bool fire_
 	}
 }
 
-void UpdatePlayer(
+void Player_Create(Player* player, double player_x, double player_y, double player_w, double player_h) {
+	AABB_Create(&player->bbox, player_x, player_y, player_w, player_h);
+	player->x_speed = 0.0;
+	player->y_speed = 0.0;
+	player->do_jump = false;
+	player->fire_mode = FIRE_TYPE_STREAM;
+}
+
+void Player_UpdatePlayer(
 	Player* player, 
 	SandPit* world, 
 	bool left, 

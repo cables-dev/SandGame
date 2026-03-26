@@ -144,13 +144,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="common.cpp" />
+    <ClCompile Include="entity.cpp" />
+    <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="player.cpp" />
+    <ClCompile Include="render.cpp" />
     <ClCompile Include="sand_sim.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.hpp" />
+    <ClInclude Include="entity.hpp" />
+    <ClInclude Include="game.hpp" />
     <ClInclude Include="player.hpp" />
+    <ClInclude Include="render.hpp" />
     <ClInclude Include="sand_sim.hpp" />
   </ItemGroup>
   <ItemGroup>

@@ -8,8 +8,8 @@ constexpr auto SAND_PIT_CELL_ID_MASK = 0b11;
 constexpr auto SAND_PIT_CELL_ID_SHIFT = 0;
 constexpr auto SAND_PIT_CELL_PARTICLE_PRESENT_MASK = 0b100;
 constexpr auto SAND_PIT_CELL_PARTICLE_PRESENT_SHIFT = 2;
-constexpr auto SAND_PIT_CELL_RESERVED_MASK = 0b1000;
-constexpr auto SAND_PIT_CELL_RESERVED_SHIFT = 3;
+constexpr auto SAND_PIT_CELL_SOLID_MASK = 0b1000;
+constexpr auto SAND_PIT_CELL_SOLID_SHIFT = 3;
 constexpr auto SAND_PIT_CELL_SIMULATE_FLAG_MASK = 0b10000;
 constexpr auto SAND_PIT_CELL_SIMULATE_FLAG_SHIFT = 4;
 constexpr auto SAND_PIT_CELL_X_VELOCITY_MASK = 0b1111100000;
@@ -70,8 +70,22 @@ inline TWO_BIT_ID SandPitCell_GetId(SandPitCell cell) {
 	return cell & SAND_PIT_CELL_ID_MASK;
 }
 
+inline void SandPitCell_SetId(SandPitCell* cell, TWO_BIT_ID id) {
+	*cell &= ~SAND_PIT_CELL_ID_MASK;
+	*cell |= (static_cast<unsigned long long>(id % 4)) << SAND_PIT_CELL_ID_SHIFT;
+}
+
 inline bool SandPitCell_GetParticlePresent(SandPitCell cell) {
 	return cell & SAND_PIT_CELL_PARTICLE_PRESENT_MASK;
+}
+
+inline void SandPitCell_SetParticlePresent(SandPitCell* cell, bool val) {
+	if (val == true) {
+		*cell |= SAND_PIT_CELL_PARTICLE_PRESENT_MASK;
+	}
+	else {
+		*cell &= ~SAND_PIT_CELL_PARTICLE_PRESENT_MASK;
+	}
 }
 
 inline bool SandPitCell_GetSimulateFlag(SandPitCell cell) {
@@ -113,6 +127,19 @@ inline bool SandPitCell_IsVisible(SandPitCell cell) {
 	return cell & SAND_PIT_CELL_PARTICLE_PRESENT_MASK;
 }
 
+inline bool SandPitCell_IsSolid(SandPitCell cell) {
+	return cell & SAND_PIT_CELL_SOLID_MASK;
+}
+
+inline void SandPitCell_SetSolid(SandPitCell* cell, bool val) {
+	if (val == true) {
+		*cell |= SAND_PIT_CELL_SOLID_MASK;
+	}
+	else {
+		*cell &= ~SAND_PIT_CELL_SOLID_MASK;
+	}
+}
+
 void SandPitCell_MarkAsSimulated(SandPitCell* grain, bool simulate_tick) {
 	if (simulate_tick) {
 		*grain |= SAND_PIT_CELL_SIMULATE_FLAG_MASK;
@@ -122,13 +149,14 @@ void SandPitCell_MarkAsSimulated(SandPitCell* grain, bool simulate_tick) {
 	}
 }
 
-SandPitCell SandPitCell_Create(TWO_BIT_ID id, bool simulate_flag, std::int32_t x_vel, std::int32_t y_vel) {
+SandPitCell SandPitCell_Create(TWO_BIT_ID id, bool simulate_flag, std::int32_t x_vel, std::int32_t y_vel, bool is_solid = false) {
 	SandPitCell result = 0;
-	result |= (id % 4) << SAND_PIT_CELL_ID_SHIFT;
-	result |= 1 << SAND_PIT_CELL_PARTICLE_PRESENT_SHIFT;
-	result |= (simulate_flag) << SAND_PIT_CELL_SIMULATE_FLAG_SHIFT;
-	result |= Bounds(x_vel, MAX_GRAIN_VELOCITY, -MAX_GRAIN_VELOCITY) << SAND_PIT_CELL_X_VELOCITY_SHIFT;
-	result |= Bounds(y_vel, MAX_GRAIN_VELOCITY, -MAX_GRAIN_VELOCITY) << SAND_PIT_CELL_Y_VELOCITY_SHIFT;
+	SandPitCell_SetId(&result, (id % 4));
+	SandPitCell_SetParticlePresent(&result, true);
+	SandPitCell_MarkAsSimulated(&result, simulate_flag);
+	SandPitCell_SetSolid(&result, is_solid);
+	SandPitCell_SetXVelocity(&result, Bounds(x_vel, MAX_GRAIN_VELOCITY, -MAX_GRAIN_VELOCITY));
+	SandPitCell_SetYVelocity(&result, Bounds(y_vel, MAX_GRAIN_VELOCITY, -MAX_GRAIN_VELOCITY));
 	return result;
 }
 
@@ -154,7 +182,7 @@ void SandPit_Create(
 	std::uint32_t num_screens_horizontal, 
 	std::uint32_t num_screens_vertical, 
 	std::uint32_t stubbornness, 
-	std::int16_t grain_x
+	std::uint16_t grain_size
 ) {
 	pit->num_screens_horizontal = num_screens_horizontal;
 	pit->num_screens_vertical = num_screens_vertical;
@@ -164,6 +192,7 @@ void SandPit_Create(
 	memset(world, 0, world_size);
 
 	pit->world = world;
+	pit->grain_size = grain_size;
 	pit->w = num_screens_horizontal * w;
 	pit->h = num_screens_vertical * h;
 	pit->stubbornness = stubbornness;
@@ -231,7 +260,7 @@ void SandPit_MoveTo(SandPit* pit, std::uint32_t x, std::uint32_t y, SandPitCell 
 	// If there is a grain in our spot we must remove it from the list.
 	SandPit_RemoveGrainAt(pit, x, y);
 
-	// Update list
+	// Update list pointers
 	auto prev_idx = SandPitCell_GetPrevIdx(val);
 	auto* prev = &pit->world[prev_idx];
 	SandPitCell_SetNextIdx(prev, new_idx);
@@ -255,13 +284,11 @@ bool SandPit_IsCellOccupied(const SandPit* pit, std::uint32_t x, std::uint32_t y
 	return SandPitCell_GetParticlePresent(grain) || SandPitCell_IsListHead(grain);				// Don't overwrite the list head!
 }
 
-void SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int particle_id) {
+// Add grain to internal list. Will insert grain into world.
+void SandPit_InsertGrainInList(SandPit* pit, std::uint32_t x, std::uint32_t y, SandPitCell grain) {
 	if (!SandPit_IsInBounds(pit, x, y))
 		return;
-	if (SandPit_IsCellOccupied(pit, x, y))
-		return;
 
-	auto grain = SandPitCell_Create(particle_id, pit->simulate_tick, 0, 0);
 	auto grain_index = SandPit_CoordsToIndex(pit, x, y);
 	if (pit->sand_head == nullptr) {
 		SandPitCell_SetListHeadFlag(&grain, true);
@@ -286,7 +313,39 @@ void SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int part
 	// If there is a grain in our spot we must remove it from the list.
 	SandPit_RemoveGrainAt(pit, x, y);
 	pit->world[grain_index] = grain;
+}
+
+void SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int particle_id) {
+	if (SandPit_IsCellOccupied(pit, x, y))
+		return;
+
+	auto grain = SandPitCell_Create(particle_id, pit->simulate_tick, 0, 0, false);
+	SandPit_InsertGrainInList(pit, x, y, grain);
 	pit->need_sim = true;
+}
+
+void SandPit_PlaceSolid(SandPit* pit, std::uint32_t x, std::uint32_t y) {
+	if (SandPit_IsCellOccupied(pit, x, y))
+		return;
+
+	auto grain = SandPitCell_Create(0, pit->simulate_tick, 0, 0, true);
+	auto grain_index = SandPit_CoordsToIndex(pit, x, y);
+	pit->world[grain_index] = grain;
+}
+
+void SandPit_PlaceSolidAABB(SandPit* pit, const AABB* aabb) {
+	double start_y = 0;
+	double end_y = 0;
+	double start_x = 0;
+	double end_x = 0;
+	AABB_GetCornerCoords(aabb, AABB_BOTTOM_LEFT, &start_x, &start_y);
+	AABB_GetCornerCoords(aabb, AABB_TOP_RIGHT, &end_x, &end_y);
+
+	for (int y = start_y; y < end_y; y++) {
+		for (int x = start_x; x < end_x; x++) {
+			SandPit_PlaceSolid(pit, x, y);
+		}
+	}
 }
 
 std::uint8_t SandPit_PseudoRand() {
@@ -316,6 +375,8 @@ void SandPit_DoCollisions(std::uint32_t x, std::uint32_t y, SandPit* pit, std::u
 		auto* collision = SandPit_Get(pit, next_x, next_y);
 		int collisions = 1;
 		while (SandPitCell_GetParticlePresent(*collision)) {
+			bool is_collision_solid = SandPitCell_IsSolid(*collision);
+
 			auto grain_x_loss = 0l;
 			auto grain_y_loss = 0l;
 			auto collision_x_loss = 0l;
@@ -323,16 +384,18 @@ void SandPit_DoCollisions(std::uint32_t x, std::uint32_t y, SandPit* pit, std::u
 
 			auto grain_x_vel = SandPitCell_GetXVelocity(*grain_ptr);
 			auto grain_y_vel = SandPitCell_GetYVelocity(*grain_ptr);
-			auto collision_x_vel = SandPitCell_GetXVelocity(*collision);
-			auto collision_y_vel = SandPitCell_GetYVelocity(*collision);
+			auto collision_x_vel = (is_collision_solid) ? 0 : SandPitCell_GetXVelocity(*collision);
+			auto collision_y_vel = (is_collision_solid) ? 0 : SandPitCell_GetYVelocity(*collision);
 			if (collisions > 3 && (std::abs(collision_x_vel) <= 1) && std::abs(collision_y_vel) <= 1) {
 				grain_x_loss = Bounds(collision_x_vel, 1, -1);
 				grain_y_loss = Bounds(collision_y_vel, 1, -1);
 				collision_x_loss = Bounds(grain_x_vel, 1, -1);
 				collision_y_loss = Bounds(grain_y_vel, 1, -1);
 			}
-			SandPitCell_SetXVelocity(collision, grain_x_vel - collision_x_loss);
-			SandPitCell_SetYVelocity(collision, grain_y_vel - collision_y_loss);
+			if (!is_collision_solid) {
+				SandPitCell_SetXVelocity(collision, grain_x_vel - collision_x_loss);
+				SandPitCell_SetYVelocity(collision, grain_y_vel - collision_y_loss);
+			}
 			SandPitCell_SetXVelocity(grain_ptr, collision_x_vel - grain_x_loss);
 			SandPitCell_SetYVelocity(grain_ptr, collision_y_vel - grain_y_loss);
 
@@ -361,9 +424,13 @@ int SandPit_GetRandomWindImpulse() {
 // Returns true if there was movement.
 bool SandPit_SimulateGrain(std::uint32_t x, std::uint32_t y, SandPit* pit, bool simulate_tick, std::uint32_t epoch) {
 	auto* grain = SandPit_Get(pit, x, y);
-	// If there is no particle here, or this cell has already been simulated, we 
-	// have no work to do.
-	if (!SandPitCell_GetParticlePresent(*grain) || SandPitCell_GetSimulateFlag(*grain) == simulate_tick) {
+	// If there is no particle here, or this cell has already been simulated, or this
+	// cell is occupied by a solid, we have no work to do.
+	if (
+		!SandPitCell_GetParticlePresent(*grain) || 
+		SandPitCell_GetSimulateFlag(*grain) == simulate_tick ||
+		SandPitCell_IsSolid(*grain)
+	) {
 		return false;
 	}
 
@@ -495,9 +562,23 @@ void SandPit_AddImpulse(SandPit* pit, std::uint32_t x, std::uint32_t y, std::int
 	pit->need_sim = true;
 }
 
-void SandPit_ClearRegion(SandPit* pit, std::uint32_t x0, std::uint32_t y0, std::uint32_t w, std::uint32_t h) {
-	for (int y = y0; y < y0 + h; y++) {
-		for (int x = x0; x < x0 + w; x++) {
+void SandPit_ClearRegion(SandPit* pit, const AABB* aabb, bool clear_solids) {
+	double start_y = 0;
+	double end_y = 0;
+	double start_x = 0;
+	double end_x = 0;
+	AABB_GetCornerCoords(aabb, AABB_BOTTOM_LEFT, &start_x, &start_y);
+	AABB_GetCornerCoords(aabb, AABB_TOP_RIGHT, &end_x, &end_y);
+
+	for (int y = start_y; y < end_y; y++) {
+		for (int x = start_x; x < end_x; x++) {
+			if (!SandPit_IsInBounds(pit, x, y))
+				continue;
+
+			auto grain = pit->world[y * pit->w + x];
+			if (!clear_solids && SandPitCell_IsSolid(grain))
+				continue;
+
 			SandPit_RemoveGrainAt(pit, x, y);
 			SandPit_ClearCell(pit, x, y);
 		}
@@ -536,14 +617,65 @@ SandPitQueryResult SandPit_QueryRegion(const SandPit* pit, std::uint32_t x0, std
 	result.w = w;
 	result.h = h;
 	result.highest_grain_y = -1;
+	result.lowest_grain_y = 0b01111111111111111111111111111111;
+	result.highest_solid_y = -1;
+	result.lowest_solid_y = 0b01111111111111111111111111111111;
 
 	for (int y = y0; y >= (int)y0 - (int)h; y--) {
 		for (int x = x0; x <= (int)x0 + (int)w; x++) {
 			if (SandPit_IsInBounds(pit, x, y) && SandPit_IsCellOccupied(pit, x, y)) {
-				result.grain_count += 1;
-				result.highest_grain_y = std::max(result.highest_grain_y, y);
+				auto grain = SandPit_Get(pit, x, y);
+				auto is_grain = !SandPitCell_IsSolid(grain);
+				result.any_grain |= is_grain;
+				result.any_solid |= !is_grain;
+
+				if (is_grain) {
+					result.grain_count += 1;
+					result.highest_grain_y = std::max(result.highest_grain_y, y);
+					result.lowest_grain_y = std::min(result.lowest_grain_y, y);
+				} else {
+					result.solid_count += 1;
+					result.highest_solid_y = std::max(result.highest_solid_y, y);
+					result.lowest_solid_y = std::min(result.lowest_solid_y, y);
+				}
 			}
 		}
 	}
 	return result;
 }
+
+void PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
+	for (auto i_x = -r; i_x < r; i_x++) {
+		for (auto i_y = -r; i_y < r; i_y++) {
+			if (i_x * i_x + i_y * i_y < r * r) {
+				SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4);
+			}
+		}
+	}
+}
+
+void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
+	for (auto i_x = -r; i_x < r; i_x++) {
+		for (auto i_y = -r; i_y < r; i_y++) {
+			if (i_x * i_x + i_y * i_y < r * r) {
+				SandPit_AddImpulse(p, x + i_x, y + i_y, (i_x > 0) ? -1 : 1, (i_y > 0) ? -1 : 1);
+			}
+		}
+	}
+
+	AABB region{};
+	AABB_Create(&region, x, y, r/2.0, r/2.0);
+	SandPit_ClearRegion(p, &region, false);
+}
+
+void BlowSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, std::int32_t v_x, std::int32_t v_y) {
+	for (auto i_x = -r; i_x < r; i_x++) {
+		for (auto i_y = -r; i_y < r; i_y++) {
+			if (i_x * i_x + i_y * i_y < r * r) {
+				SandPit_AddImpulse(p, x + i_x, y + i_y, v_x, v_y);
+			}
+		}
+	}
+}
+
+
