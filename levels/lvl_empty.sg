@@ -1,0 +1,6 @@
+level 300.0 150.0 4 1
+sound 0 assets\toast_notif.wav
+sound 1 assets\jump.wav
+sound 2 assets\boom.wav
+sound 3 assets\fuse.wav
+sound 4 assets\door_open.wav

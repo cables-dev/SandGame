@@ -5,16 +5,39 @@ bool RenderFXFlags_Get(RenderFXFlags flags, RenderFX flag) {
 	return flags & flag;
 }
 
-void RenderFXFlags_Set(RenderFXFlags* flags, RenderFX flag) {
-	*flags |= flag;
+void RenderFXFlags_Set(RenderFXFlags* flags, RenderFX flag, bool to) {
+	if (to) {
+		*flags |= flag;
+	}
+	else {
+		*flags &= ~flag;
+	}
 }
 
 bool SoundFXFlags_Get(SoundFXFlags flags, SoundFX flag) {
 	return flags & flag;
 }
 
-void SoundFXFlags_Set(SoundFXFlags* flags, SoundFX flag) {
-	*flags |= flag;
+void SoundFXFlags_Set(SoundFXFlags* flags, SoundFX flag, bool to) {
+	if (to) {
+		*flags |= flag;
+	}
+	else {
+		*flags &= ~flag;
+	}
+}
+
+bool GameActionFlags_Get(GameActionFlags flags, GameAction flag) {
+	return flags & flag;
+}
+
+void GameActionFlags_Set(GameActionFlags* flags, GameAction flag, bool to) {
+	if (to) {
+		*flags |= flag;
+	}
+	else {
+		*flags &= ~flag;
+	}
 }
 
 void AABB_Create(AABB* aabb, double x, double y, double w, double h) {

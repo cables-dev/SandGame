@@ -2,17 +2,35 @@
 //
 
 #include "common.hpp"
+#include "input.hpp"
 #include "game.hpp"
 #include "render.hpp"
 #include "audio.hpp"
 #include "level.hpp"
+#include <cassert>
+
+void DefaultKeyBindings(KeyBindings* bindings) {
+	Input_Create(bindings);
+	Input_SetBinding(bindings, ACTION_MOVE_LEFT, KEY_A);				
+	Input_SetBinding(bindings, ACTION_MOVE_RIGHT, KEY_D);
+	Input_SetBinding(bindings, ACTION_JUMP, KEY_SPACE);
+	Input_SetBinding(bindings, ACTION_FIRE, KEY_W);
+	Input_SetBinding(bindings, ACTION_SWITCH_FIRE_MODE, KEY_LEFT_CONTROL);
+	Input_SetBinding(bindings, ACTION_DBG_RESET, KEY_R);
+	Input_SetBinding(bindings, ACTION_DBG_PLACE_SAND, KEY_MOUSE_LEFT_BUTTON);
+	Input_SetBinding(bindings, ACTION_INTERACT, KEY_E);
+}
 
 int main()
 {
+	KeyBindings bindings;
 	RenderData render_data;
 	AudioData audio_data;
 	SandGame game;
 
+	DefaultKeyBindings(
+		&bindings
+	);
 	Render_Init(
 		&render_data, 
 		WINDOW_WIDTH, 
@@ -23,36 +41,18 @@ int main()
 	Audio_Init(
 		&audio_data
 	);
-	SandGame_Create(
-		&game, 
-		PIT_WIDTH / 2.0, 
-		PIT_HEIGHT / 2.0, 
-		18, 
-		30, 
-		PIT_WIDTH, 
-		PIT_HEIGHT, 
-		4, 
-		1, 
-		SAND_STUBBORNNESS, 
-		3, 
-		100
-	);
 
-	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl0.sg");
-	Render_LoadAndSetAnimationResource(&render_data, GRAPHIC_RSC_BARREL_TERRORIST_IDLE, 0.05, "assets\\barrel_terrorist_idle.gif");
-	Render_LoadAndSetAnimationResource(&render_data, GRAPHIC_RSC_BARREL_TERRORIST_EXPLODE, 0.01, "assets\\barrel_terrorist_explode.gif");
+	assert(Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl0.sg"));
 
-	EntityBarrel barrel;
-	Barrel_Create(&barrel, 750, 100, 20, 20, GRAPHIC_RSC_BARREL_TERRORIST_IDLE, GRAPHIC_RSC_BARREL_TERRORIST_EXPLODE);
-	SandGame_AddEntity(&game, &barrel, ENTITY_BARREL);
-
-	int current_frame = 0;
-	double last_update = 0;
+	// Game loop
 	while (!Render_ShouldGameClose(&render_data)) {
-		auto dt_s = GetFrameTime();
-		auto dt_ms = dt_s * 1000;
+		if (SandGame_ShouldLoadNewLevel(&game)) {
+			assert(Level_LoadFromFile(&audio_data, &render_data, &game, SandGame_GetNewLevelPath(&game)));
+		}
 
-		SandGame_Update(&game, dt_ms);
+		auto dt_s = GetFrameTime();
+		Input_FetchState(&bindings, &game.action_flags_pressed, &game.action_flags_held, &game.cursor_x, &game.cursor_y);
+		SandGame_Update(&game, dt_s);
 		Render_RenderGame(&render_data, &game, dt_s);
 		Audio_PlayFor(&audio_data, &game);
 	}
@@ -60,6 +60,7 @@ int main()
 	SandGame_Destroy(&game);
 	Audio_Shutdown(&audio_data);
 	Render_Shutdown(&render_data);
+	Input_Destroy(&bindings);
 
 	return 0;
 }

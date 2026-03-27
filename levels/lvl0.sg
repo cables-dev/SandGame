@@ -1,4 +1,16 @@
-sound 0 assets\toast_notif.wav
-sound 1 assets\jump.wav
+level 300.0 150.0 4 1
+sound 0 "assets\toast_notif.wav"
+sound 1 "assets\jump.wav"
+sound 2 "assets\boom.wav"
+sound 3 "assets\fuse.wav"
+sound 4 "assets\door_open.wav"
+graphic 0 "assets\barrel_cigarette_idle.gif" 0.1
+graphic 1 "assets\barrel_cigarette_explode.png"
+graphic 2 "assets\barrel_kurt_cobarrel_idle.gif" 0.05
+graphic 3 "assets\barrel_kurt_cobarrel_explode.png"
+graphic 4 "assets\barrel_terrorist_idle.gif" 0.05
+graphic 5 "assets\barrel_terrorist_explode.gif" 0.01
 ent 0 360 360 60 60 255 255 0 255
-ent 1 350 50 50 50 "This is a test!" 0
+ent 1 350 50 50 50 "Watch out! Smother him before he explodes." 0
+ent 2 750.0 0.0 80.0 100.0 4 5
+ent 3 1200.0 100.0 50.0 100.0 "levels\lvl_empty.sg"

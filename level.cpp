@@ -5,8 +5,25 @@
 #include <string.h>
 #include <cassert>
 
+// TODO: add error messages
+
+#define HEADER_MAGIC "level"
 #define SOUND_DEFINITION_COMMAND "sound"
+#define GRAPHIC_DEFINITION_COMMAND "graphic"
 #define ENTITY_DEFINITION_COMMAND "ent"
+#define PNG_FILE_EXTENSION ".png"
+#define JPG_FILE_EXTENSION ".jpg"
+#define JPEG_FILE_EXTENSION ".jpeg"
+#define GIF_FILE_EXTENSION ".gif"
+
+constexpr const char* IMAGE_FILE_EXTENSIONS[]{
+	PNG_FILE_EXTENSION,
+	JPG_FILE_EXTENSION,
+	JPEG_FILE_EXTENSION
+};
+constexpr const char* ANIMATION_FILE_EXTENSIONS[]{
+    GIF_FILE_EXTENSION
+};
 
 struct SandGameLevelFile {
     char* buffer_start;
@@ -18,7 +35,7 @@ struct SandGameLevelFile {
 // Will return false if the file could not be opened.
 bool SandGameLevelFile_OpenAndCreate(SandGameLevelFile* level, const char* file_path) {
     FILE* file;
-    auto err = fopen_s(&file, file_path, "r");
+    auto err = fopen_s(&file, file_path, "rb");                 // Note: "r" -> "rb" guarantees the value returned by ftell is accurate.
     if (file == nullptr)
         return false;
 
@@ -47,7 +64,7 @@ bool SandGameLevelFile_IsEOF(SandGameLevelFile* file) {
 }
 
 bool SandGameLevelFile_IsHalted(SandGameLevelFile* file) {
-    return file->halted;
+    return file->halted || SandGameLevelFile_IsEOF(file);
 }
 
 bool SandGameLevelFile_ReadStringLiteral(SandGameLevelFile* file, char** out_buffer, std::uint32_t* out_buffer_size) {
@@ -80,7 +97,12 @@ bool SandGameLevelFile_ReadStringLiteral(SandGameLevelFile* file, char** out_buf
 		*out_buffer_size = r  - l;
 
     ++r;        // Skip terminator "
-    ++r;        // Skip next space 
+    if (*r == '\0') { // Skip next space, unless we are at EOF
+        file->halted = true;
+    }
+    else {
+        ++r;
+    }
     file->buffer = r;
     file->buffer_size -= r - l;
     return true;
@@ -137,6 +159,27 @@ bool SandGameLevelFile_ReadInteger(SandGameLevelFile* file, long* out_num) {
     return true;
 }
 
+bool SandGameLevelFile_ReadUnsignedInteger(SandGameLevelFile* file, std::uint32_t* out_num) {
+    if (SandGameLevelFile_IsHalted(file))
+        return false;
+
+    char* number_string;
+    auto read_success = SandGameLevelFile_ReadString(file, &number_string, nullptr);
+    if (!read_success)
+        return false;
+
+    char* parse_ptr;
+    auto result = strtoul(number_string, &parse_ptr, 10);
+
+    if (*parse_ptr != '\0') {
+        file->halted = true;
+        return false;
+    }
+
+    *out_num = result;
+    return true;
+}
+
 bool SandGameLevelFile_ReadDouble(SandGameLevelFile* file, double* out_num) {
     if (SandGameLevelFile_IsHalted(file))
         return false;
@@ -166,7 +209,7 @@ bool Level_HandleSoundDefinition(AudioData* audio, SandGameLevelFile* level) {
         return false;
 
     char* file_path{};
-    auto file_path_result = SandGameLevelFile_ReadString(level, &file_path, nullptr);
+    auto file_path_result = SandGameLevelFile_ReadStringLiteral(level, &file_path, nullptr);
     if (!file_path_result)
         return false;
 
@@ -251,6 +294,66 @@ bool Level_HandleHintBoxDefinition(SandGame* game, SandGameLevelFile* level) {
     return true;
 }
 
+bool Level_HandleBarrelDefinition(SandGame* game, SandGameLevelFile* level) {
+    double top_left_x;
+    auto success = SandGameLevelFile_ReadDouble(level, &top_left_x);
+    if (!success) return false;
+
+    double bottom_y;
+    success = SandGameLevelFile_ReadDouble(level, &bottom_y);
+    if (!success) return false;
+
+	double w;
+    success = SandGameLevelFile_ReadDouble(level, &w);
+    if (!success) return false;
+
+	double h;
+    success = SandGameLevelFile_ReadDouble(level, &h);
+    if (!success) return false;
+
+    GraphicResource idle_rsc;
+    success = SandGameLevelFile_ReadUnsignedInteger(level, (std::uint32_t*)&idle_rsc);
+    if (!success) return false;
+
+    GraphicResource explode_rsc;
+    success = SandGameLevelFile_ReadUnsignedInteger(level, (std::uint32_t*)&explode_rsc);
+    if (!success) return false;
+
+	EntityBarrel barrel;
+	Barrel_Create(&barrel, top_left_x, bottom_y, w, h, idle_rsc, explode_rsc);  
+    SandGame_AddEntity(game, &barrel, ENTITY_BARREL);
+
+    return true;
+}
+
+bool Level_HandleLevelDoorDefinition(SandGame* game, SandGameLevelFile* level) {
+	double top_left_x;
+    auto success = SandGameLevelFile_ReadDouble(level, &top_left_x);
+    if (!success) return false;
+
+    double top_left_y;
+    success = SandGameLevelFile_ReadDouble(level, &top_left_y);
+    if (!success) return false;
+
+	double w;
+    success = SandGameLevelFile_ReadDouble(level, &w);
+    if (!success) return false;
+
+	double h;
+    success = SandGameLevelFile_ReadDouble(level, &h);
+    if (!success) return false;
+
+    char* next_level_path;
+    success = SandGameLevelFile_ReadStringLiteral(level, &next_level_path, nullptr);
+    if (!success) return false;
+
+	EntityLevelDoor door;
+	LevelDoor_Create(&door, 1200, 100, 50, 100, next_level_path);
+    SandGame_AddEntity(game, &door, ENTITY_LEVEL_DOOR);
+
+    return success;
+}
+
 bool Level_HandleEntityDefinition(SandGame* game, SandGameLevelFile* level) {
     EntityType type;
     auto type_success = SandGameLevelFile_ReadInteger(level, (long*)&type);
@@ -260,8 +363,64 @@ bool Level_HandleEntityDefinition(SandGame* game, SandGameLevelFile* level) {
     switch (type) {
 		case ENTITY_RECTANGLE: { return Level_HandleRectDefinition(game, level); }
 		case ENTITY_HINT_BOX: { return Level_HandleHintBoxDefinition(game, level); }
+		case ENTITY_BARREL: { return Level_HandleBarrelDefinition(game, level); }
+		case ENTITY_LEVEL_DOOR: { return Level_HandleLevelDoorDefinition(game, level); }
 		default: { assert("Level_HandleEntityDefinition: Unaccounted entity type encountered." && false); }
     }
+}
+
+bool Level_IsImageFileExtension(const char* ext) {
+    constexpr auto num_image_files = sizeof(IMAGE_FILE_EXTENSIONS) / sizeof(const char*);
+    for (int i = 0; i < num_image_files; i++) {
+        if (_strcmpi(ext, IMAGE_FILE_EXTENSIONS[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Level_IsAnimationFileExtension(const char* ext) {
+    constexpr auto num_animation_file_extensions = sizeof(ANIMATION_FILE_EXTENSIONS) / sizeof(const char*);
+    for (int i = 0; i < num_animation_file_extensions ; i++) {
+        if (_strcmpi(ext, ANIMATION_FILE_EXTENSIONS[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Level_HandleGraphicDefinition(RenderData* data, SandGameLevelFile* level) {
+	GraphicResource rsc;
+    auto type_success = SandGameLevelFile_ReadUnsignedInteger(level, (std::uint32_t*)&rsc);
+    if (!type_success)
+        return false;
+
+    char* file_path;
+    std::uint32_t file_path_len;
+    auto path_success = SandGameLevelFile_ReadStringLiteral(level, &file_path, &file_path_len);
+    if (!path_success || file_path_len == 0)
+        return false;
+
+    auto* file_extension = &file_path[file_path_len - 1];
+    while (file_extension > file_path && *file_extension != '.')
+        --file_extension;
+
+    if (*file_extension != '.')
+        return false;
+
+    if (Level_IsImageFileExtension(file_extension)) {
+        Render_LoadAndSetImageResource(data, rsc, file_path);
+    }
+    else if (Level_IsAnimationFileExtension(file_extension)) {
+        double refresh_period_s;
+        auto period_success = SandGameLevelFile_ReadDouble(level, &refresh_period_s);
+        if (!period_success)
+            return false;
+
+        Render_LoadAndSetAnimationResource(data, rsc, refresh_period_s, file_path);
+    }
+        
+    return true;
 }
 
 bool Level_ProcessCommand(
@@ -272,6 +431,12 @@ bool Level_ProcessCommand(
     }
     else if (strcmp(command, ENTITY_DEFINITION_COMMAND) == 0) {
         return Level_HandleEntityDefinition(game, level);
+    } 
+    else if (strcmp(command, GRAPHIC_DEFINITION_COMMAND) == 0) {
+        return Level_HandleGraphicDefinition(render, level);
+    }
+    else {
+        return false;
     }
 }
 
@@ -289,18 +454,81 @@ bool Level_ProcessFile(AudioData* audio, RenderData* render, SandGame* game, San
     return true;
 }
 
+bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, double* out_player_y, std::uint32_t* out_pit_screens_horizontal, std::uint32_t* out_pit_screens_vertical) {
+    // level [player_x] [player_y] [pit_size_horizontal] [pit_size_vertical]
+    auto result = true;
+
+	char* command_word;
+	result = SandGameLevelFile_ReadString(level, &command_word, nullptr);
+    if (!result || strcmp(command_word, HEADER_MAGIC) != 0 || SandGameLevelFile_IsHalted(level))
+        return false;
+
+	result = SandGameLevelFile_ReadDouble(level, out_player_x);
+    if (!result || SandGameLevelFile_IsHalted(level))
+        return false;
+
+	result = SandGameLevelFile_ReadDouble(level, out_player_y);
+    if (!result || SandGameLevelFile_IsHalted(level))
+        return false;
+
+	result = SandGameLevelFile_ReadUnsignedInteger(level, out_pit_screens_horizontal);
+    if (!result || SandGameLevelFile_IsHalted(level))
+        return false;
+
+	result = SandGameLevelFile_ReadUnsignedInteger(level, out_pit_screens_vertical);
+    if (!result || SandGameLevelFile_IsHalted(level))
+        return false;
+
+    return !SandGameLevelFile_IsHalted(level);
+}
+
 bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, const char* file_path) {
-    if (game->level_buffer != nullptr)
-        free((void*)game->level_buffer);
+    auto* last_level_buffer = game->level_buffer;
+
+    // Reset state
+    SandGamePersistentState* persistent;
+    SandGame_Destroy(game, &persistent);
 
     SandGameLevelFile level;
     auto open_result = SandGameLevelFile_OpenAndCreate(&level, file_path);
     if (!open_result)
         return false;
 
+    // Parse header for initialisation info
+    double player_x;
+    double player_y;
+    std::uint32_t pit_screens_horizontal;
+    std::uint32_t pit_screens_vertical;
+    auto header_result = Level_ProcessFileHeader(&level, &player_x, &player_y, &pit_screens_horizontal, &pit_screens_vertical);
+    if (!header_result)
+        return false;
+
+    // Reset game
+    SandGame_Create(            // TODO: Create default constructor elsewhere
+        game,
+        player_x,
+        player_y,
+        PLAYER_WIDTH,
+        PLAYER_HEIGHT,
+        PIT_WIDTH,
+        PIT_HEIGHT,
+        pit_screens_horizontal,
+        pit_screens_vertical,
+        SAND_STUBBORNNESS,
+        SAND_SIZE,
+        DEFAULT_MAX_ENTITIES,
+        persistent
+    );
+
     auto success = Level_ProcessFile(audio, render, game, &level);
-    if (success)
+
+    if (success) {
+		if (last_level_buffer != nullptr)
+			free((void*)last_level_buffer);
         game->level_buffer = level.buffer_start;
+
+        SandGame_NotifyLevelLoaded(game);
+    }
 
     return success;
 }

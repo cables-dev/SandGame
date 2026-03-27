@@ -147,6 +147,7 @@
     <ClCompile Include="audio.cpp" />
     <ClCompile Include="common.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="input.cpp" />
     <ClCompile Include="level.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="render.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="audio.hpp" />
     <ClInclude Include="common.hpp" />
     <ClInclude Include="game.hpp" />
+    <ClInclude Include="input.hpp" />
     <ClInclude Include="level.hpp" />
     <ClInclude Include="render.hpp" />
     <ClInclude Include="sand_sim.hpp" />
@@ -163,14 +165,17 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="levels\lvl0.sg" />
+    <None Include="lvl_empty.sg" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="assets\boom.wav" />
+    <Media Include="assets\fuse.wav" />
     <Media Include="assets\jump.mp3" />
     <Media Include="assets\toast_notif.wav" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\barrel_cigarete_explode.png" />
-    <Image Include="assets\barrel_cigarete_idle.gif" />
+    <Image Include="assets\barrel_cigarette_explode.png" />
+    <Image Include="assets\barrel_cigarette_idle.gif" />
     <Image Include="assets\barrel_kurt_cobarrel_explode.png" />
     <Image Include="assets\barrel_kurt_cobarrel_idle.gif" />
     <Image Include="assets\barrel_terrorist_explode.gif" />

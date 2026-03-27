@@ -193,6 +193,8 @@ void SandPit_Create(
 
 	pit->world = world;
 	pit->grain_size = grain_size;
+	pit->sector_w = w;
+	pit->sector_h = h;
 	pit->w = num_screens_horizontal * w;
 	pit->h = num_screens_vertical * h;
 	pit->stubbornness = stubbornness;
@@ -206,8 +208,9 @@ void SandPit_Create(
 	pit->sand_head_index = sand_head_index;
 }
 
-void SandPit_Destroy(SandPit* pit)
-{
+void SandPit_Destroy(SandPit* pit) {
+	pit->sand_head = nullptr;
+	pit->sand_head_index = 0;
 	free(pit->world);
 }
 

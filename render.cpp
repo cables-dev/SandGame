@@ -165,7 +165,7 @@ void GraphicResourceOpt_Draw(GraphicResourceOpt* opt, int x, int y, Color tint, 
 }
 
 std::uint32_t GraphicResourceOpt_GetWidth(const GraphicResourceOpt* opt) {
-	assert(!opt->present && "GraphicResourceOpt_GetWidth: Requested graphic resource is not loaded.");
+	assert(opt->present && "GraphicResourceOpt_GetWidth: Requested graphic resource is not loaded.");
 
 	switch (opt->type) {
 		case GRAPHIC_RSC_TYPE_IMAGE: { return GraphicResourceImage_GetWidth(&opt->resource.image); break; }
@@ -175,7 +175,7 @@ std::uint32_t GraphicResourceOpt_GetWidth(const GraphicResourceOpt* opt) {
 }
 
 std::uint32_t GraphicResourceOpt_GetHeight(const GraphicResourceOpt* opt) {
-	assert(!opt->present && "GraphicResourceOpt_GetHeight: Requested graphic resource is not loaded.");
+	assert(opt->present && "GraphicResourceOpt_GetHeight: Requested graphic resource is not loaded.");
 
 	switch (opt->type) {
 		case GRAPHIC_RSC_TYPE_IMAGE: { return GraphicResourceImage_GetHeight(&opt->resource.image); break; }
@@ -268,12 +268,31 @@ void RenderRectangleObstacle(const RenderData* data, const EntityRectangleObstac
 }
 
 void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
+	double bottom_left_x_w = 0;
+	double bottom_left_y_w = 0;
+	AABB_GetCornerCoords(&barrel->aabb, AABB_BOTTOM_LEFT, &bottom_left_x_w, &bottom_left_y_w);
+
+	double bottom_left_x = 0;
+	double bottom_left_y = 0;
+	WorldToScreen(bottom_left_x_w , bottom_left_y_w , &bottom_left_x, &bottom_left_y);
+
+	auto sprite_rsc = barrel->active_sprite;
+	auto needs_reset = barrel->sprite_changed;
+	if (needs_reset)
+		Render_ResetGraphicResource(data, sprite_rsc);
+
+	// cache me
+	auto sprite_h = Render_GetGraphicResourceHeight(data, sprite_rsc);
+	Render_DrawGraphicResource(data, sprite_rsc, bottom_left_x - data->camera.start_x, bottom_left_y - sprite_h - data->camera.start_y, WHITE, dt_s);
+}
+
+void RenderLevelDoor(RenderData* data, const EntityLevelDoor* door, float dt_s) {
 	double top_left_x_w = 0;
 	double top_left_y_w = 0;
 	double bottom_right_x_w = 0;
 	double bottom_right_y_w = 0;
-	AABB_GetCornerCoords(&barrel->aabb, AABB_TOP_LEFT, &top_left_x_w, &top_left_y_w);
-	AABB_GetCornerCoords(&barrel->aabb, AABB_BOTTOM_RIGHT, &bottom_right_x_w, &bottom_right_y_w);
+	AABB_GetCornerCoords(&door->aabb, AABB_TOP_LEFT, &top_left_x_w, &top_left_y_w);
+	AABB_GetCornerCoords(&door->aabb, AABB_BOTTOM_RIGHT, &bottom_right_x_w, &bottom_right_y_w);
 
 	double top_left_x = 0;
 	double top_left_y = 0;
@@ -282,12 +301,10 @@ void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
 	WorldToScreen(top_left_x_w, top_left_y_w, &top_left_x, &top_left_y);
 	WorldToScreen(bottom_right_x_w, bottom_right_y_w, &bottom_right_x, &bottom_right_y);
 
-	auto sprite = barrel->active_sprite;
-	auto needs_reset = barrel->sprite_changed;
-	if (needs_reset)
-		Render_ResetGraphicResource(data, sprite);
-
-	Render_DrawGraphicResource(data, sprite, top_left_x, top_left_y, WHITE, dt_s);
+	auto w = bottom_right_x - top_left_x;
+	auto h = bottom_right_y - top_left_y;
+	auto color = Color{ 0xff, 0xbb, 0xff, 0xff };
+	DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);
 }
 
 void RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
@@ -295,6 +312,7 @@ void RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
 		case ENTITY_RECTANGLE: { RenderRectangleObstacle(renderer, &entity->entity.rect); break; }
 		case ENTITY_HINT_BOX: { /* pass */ break; }
 		case ENTITY_BARREL: { RenderBarrel(renderer, &entity->entity.barrel, dt_s); break; }
+		case ENTITY_LEVEL_DOOR: { RenderLevelDoor(renderer, &entity->entity.door, dt_s); break; }
 		default: { assert("RenderEntity: Unaccounted entity type encountered." && false); }
 	}
 }
@@ -318,7 +336,7 @@ void InitSandTexture(RenderData* renderer) {
 	UnloadImage(img);
 }
 
-void InitRenderCamera(RenderCamera* camera) {
+void ResetRenderCamera(RenderCamera* camera) {
 	camera->start_x = 0;
 	camera->start_y = 0;
 	camera->w = WINDOW_WIDTH;
@@ -328,8 +346,13 @@ void InitRenderCamera(RenderCamera* camera) {
 void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name) {
 	InitWindow(window_w, window_h, window_name);
 	SetTargetFPS(fps);
-	InitRenderCamera(&data->camera);
+	ResetRenderCamera(&data->camera);
 	InitSandTexture(data);
+}
+
+void Render_FreeSandData(RenderData* data) {
+	UnloadTexture(data->sand_texture);
+	free(data->sand_pixel_buffer);
 }
 
 void Render_FreeGraphicResources(RenderData* data) {
@@ -339,9 +362,8 @@ void Render_FreeGraphicResources(RenderData* data) {
 }
 
 void Render_Shutdown(RenderData* renderer) {
+	Render_FreeSandData(renderer);
 	Render_FreeGraphicResources(renderer);
-	UnloadTexture(renderer->sand_texture);
-	free(renderer->sand_pixel_buffer);
 	CloseWindow();
 }
 
@@ -418,7 +440,10 @@ void Render_ProcessFx(RenderData* r, const SandGame* game) {
 		r->toast_display_duration = FX_TOAST_DISPLAY_DURATION;
 	} 
 	if (RenderFXFlags_Get(game->fx_flags, FX_WHITE_FLASH)) {
-		r->white_flash_duration = FX_WHITE_FLASH_DURATION;
+		r->white_flash_duration = FX_WHITE_FLASH_DURATION_S;
+	}
+	if (RenderFXFlags_Get(game->fx_flags, FX_BLACK_FADE_IN_OUT)) {
+		r->black_fade_in_out_duration = FX_BLACK_FADE_IN_DURATION_S + FX_BLACK_FADE_OUT_DURATION_S;
 	}
 }
 
@@ -458,21 +483,60 @@ void Render_RenderPlayerWeaponType(RenderData* r, const SandGame* game, float dt
 	DrawText(weapon_name, 10, h - WEAPON_NAME_FONT_SIZE - 10, text_h, WEAPON_NAME_FONT_COLOR);
 }
 
+void Render_RenderPlayerWeaponAmmo(RenderData* r, const SandGame* game, float dt_s) {
+	auto ammo = game->player.ammo;
+	auto capacity = PLAYER_SAND_CAPACITY;
+	auto completion = (float)ammo / (float)capacity;
+	auto bar_h = 100;
+	auto hot_height = completion * bar_h;
+	auto not_height = (1.0 - completion) * bar_h;
+
+	auto h = r->camera.h;
+	DrawRectangle(10, h - 40 - hot_height, 4, hot_height, WEAPON_NAME_FONT_COLOR);
+	DrawRectangle(10, h - 40 - bar_h, 4, not_height, Color{0xaa, 0x10, 0x44, 0xff});
+}
+
 void Render_RenderWhiteFlash(RenderData* r, float dt_s) {
-	if (r->white_flash_duration <= 0.0)
+	if (r->white_flash_duration - dt_s <= 0.0) {
+		r->white_flash_duration = -1.0;
 		return;
+	}
 
 	r->white_flash_duration -= dt_s;
-	auto completion = r->white_flash_duration / FX_WHITE_FLASH_DURATION;
-	auto alpha = (uint8_t)(255.0 * completion);
+	auto completion = r->white_flash_duration / FX_WHITE_FLASH_DURATION_S;
+	auto alpha = (uint8_t)(254.0 * completion);											// 254 to prevent potential integer overflow
 	Color display{ 0xff, 0xff, 0xff, alpha };
+	DrawRectangle(0, 0, r->camera.w, r->camera.h, display);
+}
+
+void Render_RenderBlackFadeInOut(RenderData* r, float dt_s) {
+	if (r->black_fade_in_out_duration - dt_s <= 0.0) {
+		r->black_fade_in_out_duration = -1.0;
+		return;
+	}
+
+	r->black_fade_in_out_duration -= dt_s;
+	auto alpha = 0xff;
+	// fade out (after)
+	if (r->black_fade_in_out_duration <= FX_BLACK_FADE_OUT_DURATION_S) {
+		auto completion = r->black_fade_in_out_duration / FX_BLACK_FADE_OUT_DURATION_S;
+		alpha = (uint8_t)(254.0 * completion);		// 254 to prevent potential integer overflow
+	}
+	// fade in (before)
+	else {
+		auto completion = (r->black_fade_in_out_duration - FX_BLACK_FADE_OUT_DURATION_S) / FX_BLACK_FADE_IN_DURATION_S;
+		alpha = (uint8_t)(254.0 * (1.0 - completion));		// 254 to prevent potential integer overflow
+	}
+	Color display{ 0x00, 0x00, 0x00, alpha };
 	DrawRectangle(0, 0, r->camera.w, r->camera.h, display);
 }
 
 void Render_RenderUI(RenderData* r, const SandGame* game, float dt_s) {
 	Render_RenderPlayerWeaponType(r, game, dt_s);
+	Render_RenderPlayerWeaponAmmo(r, game, dt_s);
 	Render_RenderToast(r, game, dt_s);
 	Render_RenderWhiteFlash(r, dt_s);
+	Render_RenderBlackFadeInOut(r, dt_s);
 }
 
 void Render_RenderGame(RenderData* r, const SandGame* game, float dt_s) {

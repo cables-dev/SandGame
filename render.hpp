@@ -10,7 +10,9 @@ constexpr auto FX_TOAST_DISPLAY_DURATION = 4.0;			// 4s
 constexpr auto FX_TOAST_FADE_AFTER = 3.3;
 constexpr auto FX_TOAST_FONT_SIZE = 30;
 constexpr auto FX_TOAST_FONT_COLOR = Color{0xff, 0xff, 0xff, 0xff};
-constexpr auto FX_WHITE_FLASH_DURATION = 1.0;			// 4s
+constexpr auto FX_WHITE_FLASH_DURATION_S = 1.0;			// 4s
+constexpr auto FX_BLACK_FADE_IN_DURATION_S = 1.5;		// Should be the same as DOOR_LOADING_DELAY_S.
+constexpr auto FX_BLACK_FADE_OUT_DURATION_S = 0.5;		
 
 constexpr Color PARTICLE_COLOURS[]{
 	Color{243, 227, 124, 255},
@@ -62,6 +64,7 @@ struct RenderData {
 	Color* sand_pixel_buffer;
 	float toast_display_duration = 0.0;
 	float white_flash_duration = 0.0;
+	float black_fade_in_out_duration = 0.0;
 	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES]{};
 };
 

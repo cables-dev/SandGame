@@ -5,8 +5,17 @@
 #define TWO_BIT_ID std::int8_t 
 #define PARTICLE_NOT_PRESENT -1 
 using SandPitCell = std::uint64_t;
+
+struct SandPitSector {
+	SandPitCell* sand_head{};
+	std::uint32_t sand_head_index{};
+	SandPitCell world[PIT_WIDTH * PIT_HEIGHT];
+};
+
 struct SandPit {
 	bool simulate_tick{};		
+	std::uint32_t sector_w{};
+	std::uint32_t sector_h{};
 	std::uint32_t w{};			
 	std::uint32_t h{};
 	std::uint32_t num_screens_horizontal{};			
