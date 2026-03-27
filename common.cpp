@@ -1,6 +1,22 @@
 #include "common.hpp"
 #include <cassert>
 
+bool RenderFXFlags_Get(RenderFXFlags flags, RenderFX flag) {
+	return flags & flag;
+}
+
+void RenderFXFlags_Set(RenderFXFlags* flags, RenderFX flag) {
+	*flags |= flag;
+}
+
+bool SoundFXFlags_Get(SoundFXFlags flags, SoundFX flag) {
+	return flags & flag;
+}
+
+void SoundFXFlags_Set(SoundFXFlags* flags, SoundFX flag) {
+	*flags |= flag;
+}
+
 void AABB_Create(AABB* aabb, double x, double y, double w, double h) {
 	aabb->top_left_x = x;
 	aabb->top_left_y = y;

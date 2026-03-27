@@ -1,0 +1,4 @@
+sound 0 assets\toast_notif.wav
+sound 1 assets\jump.wav
+ent 0 360 360 60 60 255 255 0 255
+ent 1 350 50 50 50 "This is a test!" 0

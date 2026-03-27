@@ -610,6 +610,10 @@ void SandPit_ForEachGrain(const SandPit* pit, SandPitForEachGrainCallback_t call
 	} 
 }
 
+SandPitQueryResult SandPit_QueryRegion(const SandPit* pit, const AABB* aabb) {
+	return SandPit_QueryRegion(pit, aabb->top_left_x, aabb->top_left_y, 2.0 * aabb->half_w, 2.0 * aabb->half_h);
+}
+
 SandPitQueryResult SandPit_QueryRegion(const SandPit* pit, std::uint32_t x0, std::uint32_t y0, std::uint32_t w, std::uint32_t h) {
 	auto result = SandPitQueryResult{};
 	result.x0 = x0;
@@ -643,39 +647,3 @@ SandPitQueryResult SandPit_QueryRegion(const SandPit* pit, std::uint32_t x0, std
 	}
 	return result;
 }
-
-void PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
-	for (auto i_x = -r; i_x < r; i_x++) {
-		for (auto i_y = -r; i_y < r; i_y++) {
-			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4);
-			}
-		}
-	}
-}
-
-void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
-	for (auto i_x = -r; i_x < r; i_x++) {
-		for (auto i_y = -r; i_y < r; i_y++) {
-			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_AddImpulse(p, x + i_x, y + i_y, (i_x > 0) ? -1 : 1, (i_y > 0) ? -1 : 1);
-			}
-		}
-	}
-
-	AABB region{};
-	AABB_Create(&region, x, y, r/2.0, r/2.0);
-	SandPit_ClearRegion(p, &region, false);
-}
-
-void BlowSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, std::int32_t v_x, std::int32_t v_y) {
-	for (auto i_x = -r; i_x < r; i_x++) {
-		for (auto i_y = -r; i_y < r; i_y++) {
-			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_AddImpulse(p, x + i_x, y + i_y, v_x, v_y);
-			}
-		}
-	}
-}
-
-

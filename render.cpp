@@ -18,6 +18,234 @@ Color GameColourToRaylibColor(const GameColour* gc) {
 	return result;
 }
 
+bool GraphicResourceOpt_IsPresent(const GraphicResourceOpt* opt) {
+	return opt->present;
+}
+
+void GraphicResourceImage_Free(GraphicResourceImage* image) {
+	if (image == nullptr)
+		return;
+
+	UnloadTexture(image->texture);
+}
+
+// Returns false on failure.
+bool GraphicResourceImage_Load(GraphicResourceImage* image, const char* file_path) {
+	Image disc_image = LoadImage(file_path);
+	auto success = IsImageValid(disc_image);
+	if (!success)
+		return false;
+
+	image->texture = LoadTextureFromImage(disc_image);
+	image->w = disc_image.width;
+	image->h = disc_image.height;
+
+	UnloadImage(disc_image);
+	return true;
+}
+
+void GraphicResourceImage_Draw(const GraphicResourceImage* image, int x, int y, Color tint) {
+	DrawTexture(image->texture, x, y, tint);
+}
+
+std::uint32_t GraphicResourceImage_GetWidth(const GraphicResourceImage* image) {
+	return image->w;
+}
+
+std::uint32_t GraphicResourceImage_GetHeight(const GraphicResourceImage* image) {
+	return image->h;
+}
+
+// Returns false on failure.
+bool GraphicResourceAnimation_Load(GraphicResourceAnimation* anim, float refresh_period_s, const char* file_path) {
+	auto num_frames = 0;
+	Image disc_anim = LoadImageAnim(file_path, &num_frames);
+	auto success = IsImageValid(disc_anim);
+	if (!success || num_frames == 0)
+		return false;
+
+	anim->texture = LoadTextureFromImage(disc_anim);
+	anim->sprite = disc_anim;
+	anim->refresh_period_s = refresh_period_s;					// Raylib uses float for timings, so we comply
+	anim->time_until_update_s = refresh_period_s;
+	anim->num_frames = num_frames;
+	anim->current_frame = 0;
+	anim->w = disc_anim.width;
+	anim->h = disc_anim.height;
+	return true;
+}
+
+void GraphicResourceAnimation_Reset(GraphicResourceAnimation* anim) {
+	anim->time_until_update_s = anim->refresh_period_s;
+	anim->current_frame = 0;
+}
+
+void GraphicResourceAnimation_Free(GraphicResourceAnimation* anim) {
+	if (anim == nullptr)
+		return;
+
+	UnloadTexture(anim->texture);
+	UnloadImage(anim->sprite);
+}
+
+std::uint32_t GraphicResourceAnimation_GetWidth(const GraphicResourceAnimation* anim) {
+	return anim->w;
+}
+
+std::uint32_t GraphicResourceAnimation_GetHeight(const GraphicResourceAnimation* anim) {
+	return anim->h;
+}
+
+void GraphicResourceAnimation_NextFrame(GraphicResourceAnimation* anim) {
+	auto next_frame_data_offset = anim->sprite.width * anim->sprite.height * sizeof(Color) * anim->current_frame;
+	UpdateTexture(anim->texture, ((unsigned char*)anim->sprite.data) + next_frame_data_offset);
+}
+
+void GraphicResourceAnimation_Draw(GraphicResourceAnimation* anim, int x, int y, Color tint, float dt_s) {
+	// Need update(s)?
+	anim->time_until_update_s -= dt_s;
+	bool next_frame = anim->time_until_update_s <= 0.0;
+	if (next_frame) {
+		auto num_updates = (-anim->time_until_update_s / anim->refresh_period_s) + 1;
+		anim->current_frame = (anim->current_frame + (int)num_updates) % anim->num_frames;
+		anim->time_until_update_s = (anim->refresh_period_s - (dt_s - anim->refresh_period_s * num_updates));
+		GraphicResourceAnimation_NextFrame(anim);
+	}
+	DrawTexture(anim->texture, x, y, tint);
+}
+
+void GraphicResourceOpt_CreateFromImage(GraphicResourceOpt* opt, const char* file_path) {
+	auto load_result = GraphicResourceImage_Load(&opt->resource.image, file_path);
+	assert(load_result && "Render_LoadAndSetImageResource: Could not load provided file.");
+	opt->type = GRAPHIC_RSC_TYPE_IMAGE;
+	opt->present = true;
+}
+
+void GraphicResourceOpt_CreateFromAnimation(GraphicResourceOpt* opt, float refresh_period_s, const char* file_path) {
+	auto load_result = GraphicResourceAnimation_Load(&opt->resource.animation, refresh_period_s, file_path);
+	assert(load_result && "Render_LoadAndSetImageResource: Could not load provided file.");
+	opt->type = GRAPHIC_RSC_TYPE_ANIMATION;
+	opt->present = true;
+}
+
+void GraphicResourceOpt_Reset(GraphicResourceOpt* opt) {
+	if (!opt->present)
+		return;
+
+	// Branch in future
+	switch (opt->type) {
+		case GRAPHIC_RSC_TYPE_IMAGE: { /* noop */; break; }
+		case GRAPHIC_RSC_TYPE_ANIMATION: { GraphicResourceAnimation_Reset(&opt->resource.animation); break; }
+		default: { assert(false && "GraphicResourceOpt_Reset: Unaccounted graphic resource type encountered."); }
+	};
+}
+
+// Does no work if opt is empty.
+void GraphicResourceOpt_Free(GraphicResourceOpt* opt) {
+	if (!opt->present)
+		return;
+
+	// Branch in future
+	switch (opt->type) {
+		case GRAPHIC_RSC_TYPE_IMAGE: { GraphicResourceImage_Free(&opt->resource.image); break; }
+		case GRAPHIC_RSC_TYPE_ANIMATION: { GraphicResourceAnimation_Free(&opt->resource.animation); break; }
+		default: { assert(false && "GraphicResourceOpt_Free: Unaccounted graphic resource type encountered."); }
+	};
+}
+
+void GraphicResourceOpt_Draw(GraphicResourceOpt* opt, int x, int y, Color tint, float dt_s) {
+	if (!opt->present)
+		return;
+
+	switch (opt->type) {
+		case GRAPHIC_RSC_TYPE_IMAGE: { GraphicResourceImage_Draw(&opt->resource.image, x, y, tint); break; }
+		case GRAPHIC_RSC_TYPE_ANIMATION: { GraphicResourceAnimation_Draw(&opt->resource.animation, x, y, tint, dt_s); break; }
+		default: { assert(false && "GraphicResourceOpt_Free: Unaccounted graphic resource type encountered."); }
+	};
+}
+
+std::uint32_t GraphicResourceOpt_GetWidth(const GraphicResourceOpt* opt) {
+	assert(!opt->present && "GraphicResourceOpt_GetWidth: Requested graphic resource is not loaded.");
+
+	switch (opt->type) {
+		case GRAPHIC_RSC_TYPE_IMAGE: { return GraphicResourceImage_GetWidth(&opt->resource.image); break; }
+		case GRAPHIC_RSC_TYPE_ANIMATION: { return GraphicResourceAnimation_GetWidth(&opt->resource.animation); break; }
+		default: { assert(false && "GraphicResourceOpt_GetWidth: Unaccounted graphic resource type encountered."); }
+	};
+}
+
+std::uint32_t GraphicResourceOpt_GetHeight(const GraphicResourceOpt* opt) {
+	assert(!opt->present && "GraphicResourceOpt_GetHeight: Requested graphic resource is not loaded.");
+
+	switch (opt->type) {
+		case GRAPHIC_RSC_TYPE_IMAGE: { return GraphicResourceImage_GetHeight(&opt->resource.image); break; }
+		case GRAPHIC_RSC_TYPE_ANIMATION: { return GraphicResourceAnimation_GetHeight(&opt->resource.animation); break; }
+		default: { assert(false && "GraphicResourceOpt_GetHeight: Unaccounted graphic resource type encountered."); }
+	};
+}
+
+void Render_FreeGraphicResourceIfPresent(RenderData* data, GraphicResource rsc) {
+	assert(rsc >= 0 && rsc < GRAPHIC_RSC_MAX && "Render_FreeGraphicResourceIfPresent: Received invalid graphic resource.");
+	auto* pigeonhole = &data->resources[rsc];
+	if (GraphicResourceOpt_IsPresent(pigeonhole)) {
+		GraphicResourceOpt_Free(pigeonhole);
+	}
+}
+
+void Render_LoadAndSetImageResource(RenderData* data, GraphicResource rsc, const char* file_path) {
+	assert(rsc >= 0 && rsc < GRAPHIC_RSC_MAX && "Render_LoadAndSetImageResource: Received invalid graphic resource.");
+
+	Render_FreeGraphicResourceIfPresent(data, rsc);
+	GraphicResourceOpt_CreateFromImage(&data->resources[rsc], file_path);
+}
+
+void Render_LoadAndSetAnimationResource(RenderData* data, GraphicResource rsc, float refresh_period_s, const char* file_path) {
+	assert(rsc >= 0 && rsc < GRAPHIC_RSC_MAX && "Render_LoadAndSetAnimationResource: Received invalid graphic resource.");
+
+	Render_FreeGraphicResourceIfPresent(data, rsc);
+	GraphicResourceOpt_CreateFromAnimation(&data->resources[rsc], refresh_period_s, file_path);
+}
+
+bool Render_IsGraphicResourceLoaded(const RenderData* data, GraphicResource rsc) {
+	if (rsc < 0 || rsc >= GRAPHIC_RSC_MAX)
+		return false;
+	auto* resource = &data->resources[rsc];
+	return GraphicResourceOpt_IsPresent(resource);
+}
+
+void Render_ResetGraphicResource(RenderData* data, GraphicResource rsc) {
+	if (rsc < 0 || rsc >= GRAPHIC_RSC_MAX)
+		return;
+
+	auto* resource = &data->resources[rsc];
+	return GraphicResourceOpt_Reset(resource);
+}
+
+void Render_DrawGraphicResource(
+	RenderData* data, 
+	GraphicResource rsc, 
+	int x, int y, 
+	Color colour, 
+	float dt_s
+) {
+	assert(Render_IsGraphicResourceLoaded(data, rsc));
+
+	auto* resource = &data->resources[rsc];
+	GraphicResourceOpt_Draw(resource, x, y, colour, dt_s);
+}
+
+std::uint32_t Render_GetGraphicResourceWidth(const RenderData* data, GraphicResource rsc) {
+	assert(Render_IsGraphicResourceLoaded(data, rsc));
+	auto* resource = &data->resources[rsc];
+	return GraphicResourceOpt_GetWidth(resource);
+}
+
+std::uint32_t Render_GetGraphicResourceHeight(const RenderData* data, GraphicResource rsc) {
+	assert(Render_IsGraphicResourceLoaded(data, rsc));
+	auto* resource = &data->resources[rsc];
+	return GraphicResourceOpt_GetHeight(resource);
+}
+
 void RenderRectangleObstacle(const RenderData* data, const EntityRectangleObstacle* rect) {
 	double top_left_x_w = 0;
 	double top_left_y_w = 0;
@@ -39,18 +267,45 @@ void RenderRectangleObstacle(const RenderData* data, const EntityRectangleObstac
 	DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);
 }
 
-void RenderEntity(const RenderData* renderer, const Entity* entity) {
+void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
+	double top_left_x_w = 0;
+	double top_left_y_w = 0;
+	double bottom_right_x_w = 0;
+	double bottom_right_y_w = 0;
+	AABB_GetCornerCoords(&barrel->aabb, AABB_TOP_LEFT, &top_left_x_w, &top_left_y_w);
+	AABB_GetCornerCoords(&barrel->aabb, AABB_BOTTOM_RIGHT, &bottom_right_x_w, &bottom_right_y_w);
+
+	double top_left_x = 0;
+	double top_left_y = 0;
+	double bottom_right_x = 0;
+	double bottom_right_y = 0;
+	WorldToScreen(top_left_x_w, top_left_y_w, &top_left_x, &top_left_y);
+	WorldToScreen(bottom_right_x_w, bottom_right_y_w, &bottom_right_x, &bottom_right_y);
+
+	auto sprite = barrel->active_sprite;
+	auto needs_reset = barrel->sprite_changed;
+	if (needs_reset)
+		Render_ResetGraphicResource(data, sprite);
+
+	Render_DrawGraphicResource(data, sprite, top_left_x, top_left_y, WHITE, dt_s);
+}
+
+void RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
 	switch (entity->type) {
 		case ENTITY_RECTANGLE: { RenderRectangleObstacle(renderer, &entity->entity.rect); break; }
+		case ENTITY_HINT_BOX: { /* pass */ break; }
+		case ENTITY_BARREL: { RenderBarrel(renderer, &entity->entity.barrel, dt_s); break; }
 		default: { assert("RenderEntity: Unaccounted entity type encountered." && false); }
 	}
 }
 
-void RenderEntities(const RenderData* renderer, const SandGame* game) {
-	static const RenderData* rr;
+void Render_RenderEntities(RenderData* renderer, const SandGame* game, float dt_s) {
+	static RenderData* rr;
+	static float dt;
 	rr = renderer;
+	dt = dt_s;
 	auto cb = [](Entity* ent) {
-		RenderEntity(rr, ent);
+		RenderEntity(rr, ent, dt);
 	};
 	SandGame_ForEachEntity(game, cb);
 }
@@ -77,7 +332,14 @@ void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_
 	InitSandTexture(data);
 }
 
+void Render_FreeGraphicResources(RenderData* data) {
+	for (int i = 0; i < MAX_GRAPHIC_RESOURCES; i++) {
+		GraphicResourceOpt_Free(&data->resources[i]);
+	}
+}
+
 void Render_Shutdown(RenderData* renderer) {
+	Render_FreeGraphicResources(renderer);
 	UnloadTexture(renderer->sand_texture);
 	free(renderer->sand_pixel_buffer);
 	CloseWindow();
@@ -85,7 +347,7 @@ void Render_Shutdown(RenderData* renderer) {
 
 void BeginRendering() {
 	BeginDrawing();
-	ClearBackground(BLACK);
+	ClearBackground(RENDER_BACKGROUND_COLOR);
 	DrawFPS(20, 20);
 }
 
@@ -93,7 +355,7 @@ void EndRendering() {
 	EndDrawing();
 }
 
-void RenderSand(const RenderData* r, const SandPit* pit) {
+void Render_RenderSand(const RenderData* r, const SandPit* pit) {
 	// Hacky....
 	static auto start_x = 0;
 	static auto start_y = 0;
@@ -117,7 +379,7 @@ void RenderSand(const RenderData* r, const SandPit* pit) {
     DrawTextureEx(r->sand_texture, {0, 0}, 0.0, (float)grain_size, WHITE);
 }
 
-void RenderPlayer(const RenderData* r, const Player* player) {
+void Render_RenderPlayer(const RenderData* r, const Player* player) {
 	auto start_x = r->camera.start_x;
 	auto start_y = r->camera.start_y;
 	double player_x_w = 0;
@@ -137,7 +399,7 @@ void RenderPlayer(const RenderData* r, const Player* player) {
 	DrawRectangleRec(player_rect, RED);
 }
 
-void MoveCamera(RenderCamera* camera, const SandGame* game) {
+void Render_MoveCamera(RenderCamera* camera, const SandGame* game) {
 	double player_x = 0;
 	double player_y = 0;
 	AABB_GetCornerCoords(&game->player.bbox, AABB_BOTTOM, &player_x, &player_y);
@@ -150,13 +412,78 @@ void MoveCamera(RenderCamera* camera, const SandGame* game) {
 	camera->start_y = start_y;
 }
 
-void Render_RenderGame(RenderData* r, const SandGame* game) {
+// Effects are drawn in UI stage.
+void Render_ProcessFx(RenderData* r, const SandGame* game) {
+	if (RenderFXFlags_Get(game->fx_flags, FX_REFRESH_TOAST)) {
+		r->toast_display_duration = FX_TOAST_DISPLAY_DURATION;
+	} 
+	if (RenderFXFlags_Get(game->fx_flags, FX_WHITE_FLASH)) {
+		r->white_flash_duration = FX_WHITE_FLASH_DURATION;
+	}
+}
+
+void Render_RenderToast(RenderData* r, const SandGame* game, float dt_s) {
+	if (r->toast_display_duration - dt_s > 0) {
+		auto* toast = game->toast;
+		auto text_w = MeasureText(toast, FX_TOAST_FONT_SIZE);	
+		auto text_color = FX_TOAST_FONT_COLOR;
+		auto fade_denominator = FX_TOAST_DISPLAY_DURATION - FX_TOAST_FADE_AFTER;
+		r->toast_display_duration -= dt_s;
+		if (r->toast_display_duration <= fade_denominator) {
+			text_color.a = (std::uint8_t)((r->toast_display_duration * 255.0) / fade_denominator);
+		}
+
+		auto center_x = r->camera.w / 2;
+		auto center_y = r->camera.h / 2;
+		DrawText(game->toast, center_x - text_w / 2.0, center_y / 2, FX_TOAST_FONT_SIZE, text_color);
+	}
+	else {
+		r->toast_display_duration = 0.0;
+	}
+}
+
+void Render_RenderPlayerWeaponType(RenderData* r, const SandGame* game, float dt_s) {
+	constexpr const char* weapon_names[FIRE_TYPE_MAX]{
+		"Stream",
+		"Burst",													
+		"Vacuum"
+	};
+
+	auto player_weapon = game->player.fire_mode;
+	assert((player_weapon >= 0 && player_weapon < FIRE_TYPE_MAX) && "Render_RenderPlayerWeaponType: Unknown fire type.");
+	auto* weapon_name = weapon_names[player_weapon];
+
+	auto h = r->camera.h;
+	auto text_h = WEAPON_NAME_FONT_SIZE;
+	DrawText(weapon_name, 10, h - WEAPON_NAME_FONT_SIZE - 10, text_h, WEAPON_NAME_FONT_COLOR);
+}
+
+void Render_RenderWhiteFlash(RenderData* r, float dt_s) {
+	if (r->white_flash_duration <= 0.0)
+		return;
+
+	r->white_flash_duration -= dt_s;
+	auto completion = r->white_flash_duration / FX_WHITE_FLASH_DURATION;
+	auto alpha = (uint8_t)(255.0 * completion);
+	Color display{ 0xff, 0xff, 0xff, alpha };
+	DrawRectangle(0, 0, r->camera.w, r->camera.h, display);
+}
+
+void Render_RenderUI(RenderData* r, const SandGame* game, float dt_s) {
+	Render_RenderPlayerWeaponType(r, game, dt_s);
+	Render_RenderToast(r, game, dt_s);
+	Render_RenderWhiteFlash(r, dt_s);
+}
+
+void Render_RenderGame(RenderData* r, const SandGame* game, float dt_s) {
 	BeginRendering();
 
-	MoveCamera(&r->camera, game);
-	RenderEntities(r, game);
-	RenderPlayer(r, &game->player);
-	RenderSand(r, &game->pit);
+	Render_MoveCamera(&r->camera, game);
+	Render_ProcessFx(r, game);
+	Render_RenderEntities(r, game, dt_s);
+	Render_RenderPlayer(r, &game->player);
+	Render_RenderSand(r, &game->pit);
+	Render_RenderUI(r, game, dt_s);
 
 	EndRendering();
 }

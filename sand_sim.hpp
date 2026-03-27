@@ -55,6 +55,10 @@ void SandPit_ClearRegion(SandPit* pit, const AABB* aabb, bool clear_solids);
 void SandPit_ForEachGrain(const SandPit* pit, SandPitForEachGrainCallback_t callback);
 SandPitQueryResult SandPit_QueryRegion(
 	const SandPit* pit, 
+	const AABB* aabb
+);
+SandPitQueryResult SandPit_QueryRegion(
+	const SandPit* pit, 
 	std::uint32_t x0,	// Top-Left corner
 	std::uint32_t y0, 
 	std::uint32_t w, 

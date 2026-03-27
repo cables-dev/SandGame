@@ -144,24 +144,37 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="audio.cpp" />
     <ClCompile Include="common.cpp" />
-    <ClCompile Include="entity.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="level.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="player.cpp" />
     <ClCompile Include="render.cpp" />
     <ClCompile Include="sand_sim.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="audio.hpp" />
     <ClInclude Include="common.hpp" />
-    <ClInclude Include="entity.hpp" />
     <ClInclude Include="game.hpp" />
-    <ClInclude Include="player.hpp" />
+    <ClInclude Include="level.hpp" />
     <ClInclude Include="render.hpp" />
     <ClInclude Include="sand_sim.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="levels\lvl0.sg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="assets\jump.mp3" />
+    <Media Include="assets\toast_notif.wav" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\barrel_cigarete_explode.png" />
+    <Image Include="assets\barrel_cigarete_idle.gif" />
+    <Image Include="assets\barrel_kurt_cobarrel_explode.png" />
+    <Image Include="assets\barrel_kurt_cobarrel_idle.gif" />
+    <Image Include="assets\barrel_terrorist_explode.gif" />
+    <Image Include="assets\barrel_terrorist_idle.gif" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
