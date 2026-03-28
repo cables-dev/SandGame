@@ -42,12 +42,12 @@ int main()
 		&audio_data
 	);
 
-	assert(Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl0.sg"));
+	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl0.sg");
 
 	// Game loop
 	while (!Render_ShouldGameClose(&render_data)) {
 		if (SandGame_ShouldLoadNewLevel(&game)) {
-			assert(Level_LoadFromFile(&audio_data, &render_data, &game, SandGame_GetNewLevelPath(&game)));
+			Level_LoadFromFile(&audio_data, &render_data, &game, SandGame_GetNewLevelPath(&game));
 		}
 
 		auto dt_s = GetFrameTime();

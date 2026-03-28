@@ -368,20 +368,28 @@ void SandGame_Destroy(SandGame* game) {
 	SandGame_DestroyEntityList(game);
 }
 
-void UpdateSandPit(SandPit* pit, bool place_button, bool clear_pit, int mouse_x, int mouse_y) {
+void UpdateSandPit(
+	SandPit* pit, 
+	bool place_button, 
+	bool clear_pit, 
+	int mouse_x, 
+	int mouse_y, 
+	std::uint32_t sand_sector_x,
+	std::uint32_t sand_sector_y
+) {
 	auto mouse_x_raw = mouse_x;
 	auto mouse_y_raw = mouse_y;
 	auto mouse_x_corrected = mouse_x_raw / pit->grain_size;
 	auto mouse_y_corrected = mouse_y_raw / pit->grain_size;
 
 	if (place_button) {
-		PlaceSandCircle(pit, mouse_x_corrected, PIT_HEIGHT - (mouse_y_corrected), 6);
+		PlaceSandCircle(pit, mouse_x_corrected, PIT_SECTOR_HEIGHT - (mouse_y_corrected), 6);
 	}
 	if (clear_pit) {
-		SandPit_Clear(pit);
+		SandPit_Clear(pit, sand_sector_x, sand_sector_y);
 	}
 
-	SandPit_SimulateStep(pit);
+	SandPit_SimulateStep(pit, sand_sector_x, sand_sector_y);
 }
 
 void SandGame_NewUpdate(SandGame* game) {
@@ -406,6 +414,13 @@ bool SandGame_IsFrozen(const SandGame* game) {
 }
 
 void SandGame_Update(SandGame* game, double dt) {
+	std::uint32_t sector_x;
+	std::uint32_t sector_y;
+	double player_x_sand = 0;
+	double player_y_sand = 0;
+	double player_x = 0;
+	double player_y = 0;
+
 	SandGame_NewUpdate(game);
 
 	if (SandGame_IsFrozen(game)) {
@@ -413,12 +428,14 @@ void SandGame_Update(SandGame* game, double dt) {
 		return;
 	}
 
-	double player_x = 0;
-	double player_y = 0;
-	AABB_GetCornerCoords(&game->player.bbox, AABB_BOTTOM, &player_x, &player_y);
-	double player_w = AABB_GetWidth(&game->player.bbox);
-	double player_h = AABB_GetHeight(&game->player.bbox);
+	AABB player_bbox = game->player.bbox;
+	double player_w = AABB_GetWidth(&player_bbox);
+	double player_h = AABB_GetHeight(&player_bbox);
+	AABB_GetCornerCoords(&player_bbox, AABB_BOTTOM, &player_x, &player_y);		
+	AABB_ScaleByReciprocal(&player_bbox, game->pit.grain_size);					// Convert to sand coordinates
+	AABB_GetCornerCoords(&player_bbox, AABB_BOTTOM, &player_x_sand, &player_y_sand);		
 
+	SandPit_WorldCoordsToSectorCoords(&game->pit, player_x_sand, player_y_sand, &sector_x, &sector_y);
 	auto start_x = ((int)player_x / WINDOW_WIDTH) * WINDOW_WIDTH;
 	auto start_y = ((int)player_y / WINDOW_HEIGHT) * WINDOW_HEIGHT;
 	auto mouse_x = game->cursor_x + start_x;
@@ -429,7 +446,9 @@ void SandGame_Update(SandGame* game, double dt) {
 		GameActionFlags_Get(game->action_flags_held, ACTION_DBG_PLACE_SAND),
 		GameActionFlags_Get(game->action_flags_pressed, ACTION_DBG_RESET),
 		mouse_x,
-		mouse_y
+		mouse_y,
+		sector_x,
+		sector_y
 	);
 	Player_UpdatePlayer(
 		&game->player,

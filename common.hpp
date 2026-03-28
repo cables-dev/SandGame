@@ -1,13 +1,10 @@
 #pragma once
 #include <cstdint>
 
-constexpr std::uint32_t SAND_SIZE{ 3 };
 constexpr std::uint32_t LOWEST_Y_COORDINATE{ 0 };
 constexpr std::uint32_t WINDOW_WIDTH{ 1800 };
 constexpr std::uint32_t WINDOW_HEIGHT{ 900 };
 constexpr std::uint32_t SAND_STUBBORNNESS{ 4 };
-constexpr std::uint32_t PIT_WIDTH{ WINDOW_WIDTH / SAND_SIZE };
-constexpr std::uint32_t PIT_HEIGHT{ WINDOW_HEIGHT / SAND_SIZE };
 constexpr std::uint32_t NUM_SCREENS_HORIZONTAL{ 4 };				// Debug...
 constexpr auto NUM_SCREENS_VERTICAL{ 1 };
 

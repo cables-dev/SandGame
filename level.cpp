@@ -46,7 +46,7 @@ bool SandGameLevelFile_OpenAndCreate(SandGameLevelFile* level, const char* file_
 
     level->buffer_start = (char*)(malloc(file_size));
     level->buffer = level->buffer_start;
-    level->buffer_size = file_size;
+    level->buffer_size = file_size;                         // TODO: fix
     fread(level->buffer_start, 1, file_size, file);
     level->buffer_start[file_size - 1] = '\0';
     level->halted = false;
@@ -510,8 +510,8 @@ bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, co
         player_y,
         PLAYER_WIDTH,
         PLAYER_HEIGHT,
-        PIT_WIDTH,
-        PIT_HEIGHT,
+        PIT_SECTOR_WIDTH,
+        PIT_SECTOR_HEIGHT,
         pit_screens_horizontal,
         pit_screens_vertical,
         SAND_STUBBORNNESS,

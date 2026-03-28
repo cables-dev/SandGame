@@ -329,9 +329,9 @@ void Render_RenderEntities(RenderData* renderer, const SandGame* game, float dt_
 }
 
 void InitSandTexture(RenderData* renderer) {
-	auto img = GenImageColor(PIT_WIDTH, PIT_HEIGHT, BLANK);
-	renderer->sand_pixel_buffer = (Color*)malloc(PIT_WIDTH * PIT_HEIGHT * sizeof(Color));
-	memset(renderer->sand_pixel_buffer, 0, PIT_WIDTH * PIT_HEIGHT * sizeof(Color));
+	auto img = GenImageColor(PIT_SECTOR_WIDTH, PIT_SECTOR_HEIGHT, BLANK);
+	renderer->sand_pixel_buffer = (Color*)malloc(PIT_SECTOR_WIDTH * PIT_SECTOR_HEIGHT * sizeof(Color));
+	memset(renderer->sand_pixel_buffer, 0, PIT_SECTOR_WIDTH * PIT_SECTOR_HEIGHT * sizeof(Color));
 	renderer->sand_texture = LoadTextureFromImage(img);
 	UnloadImage(img);
 }
@@ -383,19 +383,19 @@ void Render_RenderSand(const RenderData* r, const SandPit* pit) {
 	static auto start_y = 0;
 	static auto* sand_pixel_buffer = r->sand_pixel_buffer;		// ASSUMES BUFFER DOES NOT MOVE IN MEMORY...
 	auto grain_size = pit->grain_size;
+	auto sector_x = 0u;
+	auto sector_y = 0u;
 	start_x = r->camera.start_x / grain_size;
 	start_y = r->camera.start_y / grain_size;
 
-	// Clear texture
-    memset(r->sand_pixel_buffer, 0, PIT_WIDTH * PIT_HEIGHT * sizeof(Color));
+	SandPit_WorldCoordsToSectorCoords(pit, start_x, start_y, &sector_x, &sector_y);
+	// Clear texture 
+	// TODO: extract function
+    memset(r->sand_pixel_buffer, 0, PIT_SECTOR_WIDTH * PIT_SECTOR_HEIGHT * sizeof(Color));
     auto cb = [](TWO_BIT_ID id, uint32_t x, uint32_t y) {
-		if (x >= start_x && x <= start_x + PIT_WIDTH && y >= start_y && y <= start_y + PIT_HEIGHT) {
-			x -= start_x;
-			y -= start_y;
-			sand_pixel_buffer[(PIT_HEIGHT - y - 1) * PIT_WIDTH + x] = PARTICLE_COLOURS[id];
-		}
+		sand_pixel_buffer[(PIT_SECTOR_HEIGHT - y - 1) * PIT_SECTOR_WIDTH + x] = PARTICLE_COLOURS[id];
     };
-    SandPit_ForEachGrain(pit, cb);
+    SandPit_ForEachGrain(pit, sector_x, sector_y, cb);
 
     UpdateTexture(r->sand_texture, sand_pixel_buffer);
     DrawTextureEx(r->sand_texture, {0, 0}, 0.0, (float)grain_size, WHITE);
