@@ -1,7 +1,8 @@
 #pragma once
 #include "common.hpp"
 #include "raylib.h"
-#include <unordered_map>			// TODO: migrate to c object
+#include <unordered_map>			// TODO: USE C OBJECTSSS
+#include <vector>			// 
 
 constexpr static auto KEY_MOUSE_BUTTON_FLAG = 1 << 16;
 
@@ -19,7 +20,7 @@ enum InputMouseKey {
 
 
 struct KeyBindings {
-	std::unordered_map<GameAction, InputKey> bindings;
+	std::unordered_map<GameAction, std::vector<InputKey>> bindings;
 };
 
 void Input_Create(KeyBindings* bindings);

@@ -1,6 +1,6 @@
 #pragma once
-#include <cstdint>
 #include "common.hpp"
+#include <cstdint>
 
 #define TWO_BIT_ID std::int8_t 
 #define PARTICLE_NOT_PRESENT -1 
@@ -64,7 +64,7 @@ void SandPit_Create(
 void SandPit_Destroy(SandPit* pit);
 void SandPit_Clear(SandPit* pit, std::uint32_t sector_x, std::uint32_t sector_y);
 void SandPit_SimulateStep(SandPit* pit, std::uint32_t sector_x, std::uint32_t sector_y);
-void SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int particle_id);
+bool SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int particle_id);
 void SandPit_PlaceSolid(SandPit* pit, std::uint32_t x, std::uint32_t y);
 void SandPit_PlaceSolidAABB(SandPit* pit, const AABB* aabb);
 void SandPit_AddImpulse(SandPit* pit, std::uint32_t x, std::uint32_t y, std::int32_t x_v, std::int32_t y_v);

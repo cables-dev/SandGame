@@ -66,12 +66,14 @@ struct RenderData {
 	float white_flash_duration = 0.0;
 	float black_fade_in_out_duration = 0.0;
 	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES]{};
+	GraphicResource skybox;
 };
 
 // TODO: pass global constants as arguments
-void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name);
+void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name, GraphicResource skybox);
 void Render_Shutdown(RenderData* data);
 bool Render_ShouldGameClose(const RenderData* data);
-void Render_RenderGame(RenderData* data, const SandGame* game, float dt_s);
+void Render_RenderGame(RenderData* data, SandGame* game, float dt_s);
 void Render_LoadAndSetImageResource(RenderData* data, GraphicResource rsc, const char* file_path);
 void Render_LoadAndSetAnimationResource(RenderData* data, GraphicResource rsc, float refresh_period_s, const char* file_path);
+float Render_GetFrameTime();

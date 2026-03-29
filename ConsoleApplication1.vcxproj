@@ -165,9 +165,10 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="levels\lvl0.sg" />
-    <None Include="lvl_empty.sg" />
+    <None Include="levels\lvl_empty.sg" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="assets\ambience.wav" />
     <Media Include="assets\boom.wav" />
     <Media Include="assets\fuse.wav" />
     <Media Include="assets\jump.mp3" />
@@ -180,6 +181,8 @@
     <Image Include="assets\barrel_kurt_cobarrel_idle.gif" />
     <Image Include="assets\barrel_terrorist_explode.gif" />
     <Image Include="assets\barrel_terrorist_idle.gif" />
+    <Image Include="assets\player_idle.png" />
+    <Image Include="assets\player_walking.gif" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

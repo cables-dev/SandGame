@@ -15,9 +15,9 @@ void DefaultKeyBindings(KeyBindings* bindings) {
 	Input_SetBinding(bindings, ACTION_MOVE_RIGHT, KEY_D);
 	Input_SetBinding(bindings, ACTION_JUMP, KEY_SPACE);
 	Input_SetBinding(bindings, ACTION_FIRE, KEY_W);
+	Input_SetBinding(bindings, ACTION_FIRE, KEY_MOUSE_LEFT_BUTTON);
 	Input_SetBinding(bindings, ACTION_SWITCH_FIRE_MODE, KEY_LEFT_CONTROL);
 	Input_SetBinding(bindings, ACTION_DBG_RESET, KEY_R);
-	Input_SetBinding(bindings, ACTION_DBG_PLACE_SAND, KEY_MOUSE_LEFT_BUTTON);
 	Input_SetBinding(bindings, ACTION_INTERACT, KEY_E);
 }
 
@@ -36,7 +36,8 @@ int main()
 		WINDOW_WIDTH, 
 		WINDOW_HEIGHT, 
 		144, 
-		"Sand"
+		"Sand",
+		GRAPHIC_RSC_BACKGROUND
 	);
 	Audio_Init(
 		&audio_data
@@ -50,11 +51,11 @@ int main()
 			Level_LoadFromFile(&audio_data, &render_data, &game, SandGame_GetNewLevelPath(&game));
 		}
 
-		auto dt_s = GetFrameTime();
+		auto dt_s = Render_GetFrameTime();
 		Input_FetchState(&bindings, &game.action_flags_pressed, &game.action_flags_held, &game.cursor_x, &game.cursor_y);
 		SandGame_Update(&game, dt_s);
 		Render_RenderGame(&render_data, &game, dt_s);
-		Audio_PlayFor(&audio_data, &game);
+		Audio_Play(&audio_data, &game.sfx_flags);
 	}
 
 	SandGame_Destroy(&game);

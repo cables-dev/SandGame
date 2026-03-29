@@ -2,12 +2,11 @@
 #include <cstdint>
 
 constexpr std::uint32_t LOWEST_Y_COORDINATE{ 0 };
-constexpr std::uint32_t WINDOW_WIDTH{ 1800 };
-constexpr std::uint32_t WINDOW_HEIGHT{ 900 };
+constexpr std::uint32_t WINDOW_WIDTH{ 1920 };
+constexpr std::uint32_t WINDOW_HEIGHT{ 1080 };
 constexpr std::uint32_t SAND_STUBBORNNESS{ 4 };
 constexpr std::uint32_t NUM_SCREENS_HORIZONTAL{ 4 };				// Debug...
 constexpr auto NUM_SCREENS_VERTICAL{ 1 };
-
 
 using RenderFXFlags = std::uint32_t;
 using SoundFXFlags = std::uint32_t;
@@ -16,21 +15,29 @@ constexpr RenderFXFlags NULL_FX_FLAGS = 0;
 constexpr SoundFXFlags NULL_SFX_FLAGS = 0;
 constexpr GameActionFlags NULL_ACTION_FLAGS = 0;
 
-enum AudioResource : std::uint32_t {			// Index into AudioData.sounds
+enum AudioResource : std::int32_t {			// Index into AudioData.sounds
 	AUDIO_RSC_TOAST_NOTIFY,
 	AUDIO_RSC_JUMP,
 	AUDIO_RSC_BOOM,
 	AUDIO_RSC_FUSE,
 	AUDIO_RSC_DOOR_OPEN,
+	AUDIO_RSC_AMBIENT,
+	AUDIO_RSC_WIND,
 	AUDIO_RSC_MAX
 };
-enum GraphicResource : std::uint32_t {	
+enum GraphicResource : std::int32_t {	
 	GRAPHIC_RSC_BARREL_CIGARETTE_IDLE,			// Index into RenderData.graphics
 	GRAPHIC_RSC_BARREL_CIGARETTE_EXPLODE,		
 	GRAPHIC_RSC_BARREL_KURT_IDLE,		
 	GRAPHIC_RSC_BARREL_KURT_EXPLODE,
 	GRAPHIC_RSC_BARREL_TERRORIST_IDLE,		
 	GRAPHIC_RSC_BARREL_TERRORIST_EXPLODE,
+	GRAPHIC_RSC_BACKGROUND,
+	GRAPHIC_RSC_PLAYER_WALK_LEFT,
+	GRAPHIC_RSC_PLAYER_WALK_RIGHT,
+	GRAPHIC_RSC_PLAYER_IDLE_LEFT,
+	GRAPHIC_RSC_PLAYER_IDLE_RIGHT,
+	GRAPHIC_RSC_GRASS_FLOOR,
 	GRAPHIC_RSC_MAX,
 };
 enum RenderFX {
@@ -45,6 +52,8 @@ enum SoundFX {
 	SFX_BOOM = 1 << AUDIO_RSC_BOOM,
 	SFX_FUSE = 1 << AUDIO_RSC_FUSE,
 	SFX_DOOR_OPEN = 1 << AUDIO_RSC_DOOR_OPEN,
+	SFX_TOGGLE_AMBIENT = 1 << AUDIO_RSC_AMBIENT,
+	SFX_TOGGLE_WIND = 1 << AUDIO_RSC_WIND,
 	SFX_MAX = 1 << AUDIO_RSC_MAX 
 };
 enum GameAction {
@@ -111,3 +120,6 @@ void AABB_ScaleByReciprocal(AABB* aabb, double x);
 bool AABB_Intersects(const AABB* aabb1, const AABB* aabb2);
 double AABB_GetWidth(const AABB* aabb);
 double AABB_GetHeight(const AABB* aabb);
+
+void PseudoRandom_Seed(std::uint32_t seed);
+std::uint32_t PseudoRandom_GetU32();

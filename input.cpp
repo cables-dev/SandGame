@@ -5,7 +5,9 @@ void Input_Create(KeyBindings* bindings) {
 }
 
 void Input_SetBinding(KeyBindings* bindings, GameAction action, InputKey bind_to) {
-	bindings->bindings.insert({ action, bind_to });
+	if (bindings->bindings.find(action) != bindings->bindings.end())
+		bindings->bindings[action].push_back(bind_to);
+	bindings->bindings.insert({ action, {bind_to} });
 }
 
 bool Input_IsMouseButton(InputKey key) {
@@ -43,9 +45,15 @@ void Input_FetchState(
 	int* out_mouse_x, 
 	int* out_mouse_y
 ) {
-	for (auto& [action_flag, key] : bindings->bindings) {
-		GameActionFlags_Set(out_flags_pressed, action_flag, Input_GetInputKeyPressed(key));
-		GameActionFlags_Set(out_flags_held, action_flag, Input_GetInputKeyHeld(key));
+	for (auto& [action_flag, keys] : bindings->bindings) {
+		auto pressed = false;
+		auto held = false;
+		for (auto& key : keys) {
+			pressed |= Input_GetInputKeyPressed(key);
+			held |= Input_GetInputKeyHeld(key);
+		}
+		GameActionFlags_Set(out_flags_pressed, action_flag, pressed);
+		GameActionFlags_Set(out_flags_held, action_flag, held);
 	}
 	*out_mouse_x = GetMouseX();
 	*out_mouse_y = GetMouseY();

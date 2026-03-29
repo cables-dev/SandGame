@@ -311,7 +311,7 @@ void SandPitSector_Init(
 	sect->origin_x = origin_x_absolute;
 	sect->origin_y = origin_y_absolute;
 	sect->w = sector_width;
-	sect->h = sector_width;
+	sect->h = sector_height;
 
 	// Create sand list head in top left corner
 	auto sand_head_index = SandPitSector_CoordsToIndex(sect, 0, sector_height - 1);
@@ -332,7 +332,7 @@ void SandPit_InitSectors(
 
 	for (int sect_y = 0; sect_y < num_sectors_vertical; sect_y++) {
 		for (int sect_x = 0; sect_x < num_sectors_horizontal; sect_x++) {
-			auto* sector = &pit->sectors[sect_y * PIT_SECTOR_WIDTH + sect_x];				// TODO: GetSector
+			auto* sector = SandPit_GetSector(pit, sect_x, sect_y);
 			SandPitSector_Init(
 				sector, 
 				sect_x * PIT_SECTOR_WIDTH, 
@@ -538,19 +538,21 @@ void SandPit_AddGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, SandPitCel
 	SandPitSector_AddGrain(sector, local_x, local_y, grain);
 }
 
-void SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int particle_id) {
+// Returns true on success
+bool SandPit_PlaceGrain(SandPit* pit, std::uint32_t x, std::uint32_t y, int particle_id) {
 	if (!SandPit_IsInBounds(pit, x, y))
-		return;
+		return false;
 
 	std::uint32_t local_x;
 	std::uint32_t local_y;
 	auto* sector = SandPit_GetSectorAtWorldCoords(pit, x, y);
 	if (SandPit_IsCellOccupied(pit, x, y))
-		return;
+		return false;
 
 	SandPitSector_TransformAbsoluteCoordsToLocal(sector, x, y, &local_x, &local_y);
 	SandPitSector_AddGrain(sector, local_x, local_y, SandPitCell_Create(particle_id, sector->simulate_tick, 0, 0, false));
 	sector->need_sim = true;
+	return true;
 }
 
 void SandPit_PlaceSolid(SandPit* pit, std::uint32_t x, std::uint32_t y) {
@@ -584,7 +586,7 @@ void SandPit_PlaceSolidAABB(SandPit* pit, const AABB* aabb) {
 }
 
 std::uint8_t SandPit_PseudoRand() {
-	return rand();
+	return (std::uint8_t)(PseudoRandom_GetU32());
 }
 
 void SandPitSector_DoCollisions(
@@ -656,7 +658,7 @@ void SandPitSector_DoCollisions(
 
 int SandPit_GetRandomWindImpulse() {
 	// Either -1, 0 or 1
-	auto result = rand() % (12+1);			// Random number from 0 - 12
+	auto result = SandPit_PseudoRand() % (12 + 1);			// Random number from 0 - 12
 	result -= 6;							// Random number from -6 to 6
 	return result / 5;						
 }

@@ -99,3 +99,17 @@ double AABB_GetWidth(const AABB* aabb) {
 double AABB_GetHeight(const AABB* aabb) {
 	return 2.0 * aabb->half_h;
 }
+
+// Streets are saying this is faster than rand...
+static std::uint32_t random_seed = 0xFAFFAC;
+
+void PseudoRandom_Seed(std::uint32_t seed) {
+	random_seed = seed;
+}
+
+std::uint32_t PseudoRandom_GetU32() {
+	random_seed ^= random_seed << 13;
+    random_seed ^= random_seed >> 17;
+    random_seed ^= random_seed << 5;
+    return random_seed;
+}

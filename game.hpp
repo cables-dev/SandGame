@@ -5,15 +5,18 @@
 constexpr auto PLAYER_HORIZONTAL_SPEED = 700.0;
 constexpr auto PLAYER_HORIZONTAL_SLOW_SPEED = 1200.0;
 constexpr auto PLAYER_HORIZONTAL_SLOW_SPEED_THRESH = 0.03 * PLAYER_HORIZONTAL_SLOW_SPEED;
-constexpr auto PLAYER_MAX_SPEED = 1500.0;
+constexpr auto PLAYER_MAX_SPEED = 1900.0;
+constexpr auto PLAYER_IS_GOING_FAST_PERCENT = 0.80;
+constexpr auto PLAYER_IS_GOING_FAST_VELOCITY_THRESHHOLD_SQUARED = PLAYER_MAX_SPEED * PLAYER_MAX_SPEED * PLAYER_IS_GOING_FAST_PERCENT ;
 constexpr auto PLAYER_AUTO_JUMP_HEIGHT = 3.0;
 constexpr auto PLAYER_JUMP_SPEED = 400.0;
 constexpr auto PLAYER_JUMP_EPSILON = SAND_SIZE / 2.0;
 constexpr auto PLAYER_JUMP_SPEED_BOOST_X = 40.0;
-constexpr auto PLAYER_WIDTH = 18;
-constexpr auto PLAYER_HEIGHT = 30;
+constexpr auto PLAYER_WIDTH = 24;
+constexpr auto PLAYER_HEIGHT = 40;
+constexpr auto MIN_DISTANCE_FOR_SAND_PLACE_MODE = 100;
 constexpr auto G = 900.0;
-constexpr auto PLAYER_SAND_CAPACITY = 5000;
+constexpr auto PLAYER_SAND_CAPACITY = 7500;
 constexpr auto BARREL_EXPLOSION_DELAY_S = 0.5;
 constexpr auto DOOR_LOADING_DELAY_S = 1.5;
 constexpr auto DEFAULT_MAX_ENTITIES = 100;
@@ -25,9 +28,14 @@ enum EntityType;
 
 enum PlayerFireType {			// Don't change order...
 	FIRE_TYPE_STREAM,
-	FIRE_TYPE_BURST,
+	FIRE_TYPE_PLACE,
 	FIRE_TYPE_VACUUM,
 	FIRE_TYPE_MAX
+};
+
+enum PlayerDirection {
+	PLAYER_FACING_LEFT,
+	PLAYER_FACING_RIGHT
 };
 
 struct Player {
@@ -37,10 +45,11 @@ struct Player {
 	bool do_jump{};
 	PlayerFireType fire_mode{};
 	int ammo{};
+	PlayerDirection direction = PLAYER_FACING_RIGHT;
 };
 
 struct SandGamePersistentState {
-	double frozen_for_s = 0.0;
+	int nothing{};
 };
 
 struct SandGame {
@@ -49,6 +58,7 @@ struct SandGame {
 	SoundFXFlags sfx_flags = NULL_SFX_FLAGS;
 	GameActionFlags action_flags_pressed = NULL_ACTION_FLAGS;
 	GameActionFlags action_flags_held = NULL_ACTION_FLAGS;;
+	double frozen_for_s = 0.0;
 	int cursor_x;
 	int cursor_y;
 	Player player;
@@ -87,7 +97,7 @@ void SandGame_RemoveEntity(SandGame* game, Entity* entity);
 void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb);
 void SandGame_SetToast(SandGame* game, const char* toast);
 void SandGame_SetFXFlag(SandGame* game, RenderFX fx);
-void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx);
+void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx, bool to=true);
 void SandGame_SetNewLevelPath(SandGame* game, const char* new_level_path);
 const char* SandGame_GetNewLevelPath(const SandGame* game);						// nullptr if empty
 bool SandGame_ShouldLoadNewLevel(const SandGame* game);
@@ -110,8 +120,26 @@ struct EntityRectangleObstacle {
 	EntityVTable vtable;						// !Important 
 	AABB aabb;
 	GameColour colour;
+	bool has_graphic;
+	GraphicResource graphic;
 };
-void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, double w, double h, const GameColour colour);
+void RectangleObstacle_Create(
+	EntityRectangleObstacle* rect, 
+	double top_left_x, 
+	double top_left_y, 
+	double w, 
+	double h, 
+	const GameColour colour
+);
+void RectangleObstacle_Create(
+	EntityRectangleObstacle* rect, 
+	double top_left_x, 
+	double top_left_y, 
+	double w, 
+	double h, 
+	const GameColour colour,
+	GraphicResource graphic
+);
 void RectangleObstacle_Place(Entity* rect, SandGame* game);
 void RectangleObstacle_Remove(Entity* rect, SandGame* game);
 void RectangleObstacle_Think(Entity* rect, SandGame* game, double dt);
@@ -200,3 +228,6 @@ void Entity_Think(Entity* _this, SandGame* game, double dt);
 
 
 // ======= PLAYER ======= 
+PlayerDirection Player_GetDirection(const Player* player);
+bool Player_IsMoving(const Player* player);
+bool Player_IsGoingFast(const Player* player);

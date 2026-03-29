@@ -8,17 +8,20 @@
 #include <utility>
 #include <cstdlib>
 
-void PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r) {
+int PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, SandPitQueryResult* out_region_query=nullptr) {
+	auto num_placed = 0;
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
-				SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4);
+				if (SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4))
+					++num_placed;
 			}
 		}
 	}
+	return num_placed;
 }
 
-void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, SandPitQueryResult* out_region_query) {
+void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, SandPitQueryResult* out_region_query=nullptr) {
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
@@ -27,10 +30,12 @@ void VacuumSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, Sand
 		}
 	}
 
-	AABB region{};
-	AABB_Create(&region, x - (r/2.0), y + (r/2.0), r, r);
-	*out_region_query = SandPit_QueryRegion(p, &region);
-	SandPit_ClearRegion(p, &region, false);
+	if (out_region_query != nullptr) {
+		AABB region{};
+		AABB_Create(&region, x - (r / 2.0), y + (r / 2.0), r, r);
+		*out_region_query = SandPit_QueryRegion(p, &region);
+		SandPit_ClearRegion(p, &region, false);
+	}
 }
 
 void BlowSand(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, std::int32_t v_x, std::int32_t v_y) {
@@ -72,6 +77,14 @@ PlayerFireType NextFireType(PlayerFireType type) {
 	return (PlayerFireType)((type + 1) % FIRE_TYPE_MAX);
 }
 
+void Player_PlayerMovementSounds(Player* player, SoundFXFlags* flags) {
+	SoundFXFlags_Set(flags, SFX_TOGGLE_WIND, Player_IsGoingFast(player));
+}
+
+void Player_UpdateDirection(Player* player) {
+	player->direction = player->x_speed > 0.0 ? PLAYER_FACING_RIGHT : PLAYER_FACING_LEFT;
+}
+
 void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, bool jump, float dt) {
 	auto* world = &game->pit;
 
@@ -79,10 +92,12 @@ void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, boo
 	if (left) {
 		auto delta_speed = (player->x_speed > 0) ? PLAYER_HORIZONTAL_SLOW_SPEED : PLAYER_HORIZONTAL_SPEED;
 		IncrementPlayerXVelocity(player, -delta_speed * dt);
+		Player_UpdateDirection(player);
 	}
 	else if (right) {
 		auto delta_speed = (player->x_speed < 0) ? PLAYER_HORIZONTAL_SLOW_SPEED : PLAYER_HORIZONTAL_SPEED;
 		IncrementPlayerXVelocity(player, delta_speed * dt);
+		Player_UpdateDirection(player);
 	}
 	else {
 		ApplyPlayerFriction(player, dt);
@@ -133,6 +148,9 @@ void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, boo
 		player_y_sand += PLAYER_JUMP_EPSILON * world->grain_size;
 		SandGame_SetSFXFlag(game, SFX_JUMP);
 	}
+	else {
+		SetPlayerYVelocity(player, 0.0);
+	}
 
 	player_y_sand += (player->y_speed / world->grain_size) * dt;
 
@@ -161,10 +179,12 @@ void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, boo
 	auto dx = player_x_sand - prev_player_x_sand;
 	auto dy = player_y_sand - prev_player_y_sand;
 	AABB_MoveBy(&player->bbox, dx * world->grain_size, dy * world->grain_size);
+
+	Player_PlayerMovementSounds(player, &game->sfx_flags);
 }
 
 bool PlayerFireType_DoesConsumeSand(PlayerFireType t) {
-	return t == FIRE_TYPE_STREAM || t == FIRE_TYPE_BURST;
+	return t == FIRE_TYPE_STREAM || t == FIRE_TYPE_PLACE;
 }
 
 void DoPlayerFireSand(Player* player, SandPit* world, bool fire_held, bool fire_press, bool switch_fire_mode, int mouse_x, int mouse_y) {
@@ -217,18 +237,14 @@ void DoPlayerFireSand(Player* player, SandPit* world, bool fire_held, bool fire_
 		);
 		player->ammo = std::max(0, player->ammo - 1);
 	}
-	else if (player->fire_mode == FIRE_TYPE_BURST && fire_press) {
-		auto x_offset = (lhs) ? -7 : 7;
-		PlaceSandCircle(world, (sand_x + x_offset), sand_y, 6);
-		BlowSand(
-			world,
-			(sand_x + x_offset),
-			sand_y,
-			8,
-			unit_x * 12,
-			unit_y * 12 
+	else if (player->fire_mode == FIRE_TYPE_PLACE && fire_held && sight_vec_mag >= MIN_DISTANCE_FOR_SAND_PLACE_MODE ) {
+		auto num_placed = PlaceSandCircle(
+			world, 
+			mouse_x, 
+			mouse_y, 
+			6
 		);
-		player->ammo = std::max(0, player->ammo - 144);
+		player->ammo = std::max(0, player->ammo - num_placed);
 	}
 	else if (player->fire_mode == FIRE_TYPE_VACUUM && fire_held) {
 		//if (player->ammo >= PLAYER_SAND_CAPACITY)					// Uncomment to prevent unlimited vacuum
@@ -239,7 +255,7 @@ void DoPlayerFireSand(Player* player, SandPit* world, bool fire_held, bool fire_
 			world,
 			player_x_sand,
 			player_y_sand,
-			20,
+			25,
 			&sweep
 		);
 		player->ammo = std::min(PLAYER_SAND_CAPACITY, player->ammo + (int)sweep.grain_count);
@@ -359,11 +375,16 @@ void SandGame_Create(SandGame* game, double player_x, double player_y, double pl
 
 void SandGame_Destroy(SandGame* game, SandGamePersistentState** out_persistent_state) {
 	*out_persistent_state = game->persistent;
-	SandGame_Destroy(game);
+
+	game->persistent = nullptr;
+	SandPit_Destroy(&game->pit);				// TODO: DRY with void SandGame_Destroy(SandGame* game)...
+	SandGame_DestroyEntityList(game);
 }
 
 void SandGame_Destroy(SandGame* game) {
-	free(game->persistent);					// game->persistent could be nullptr, but free will still succeed.
+	if (game->persistent) {
+		free(game->persistent);	 // game->persistent could be nullptr, but free will still succeed.
+	}
 	SandPit_Destroy(&game->pit);
 	SandGame_DestroyEntityList(game);
 }
@@ -377,24 +398,10 @@ void UpdateSandPit(
 	std::uint32_t sand_sector_x,
 	std::uint32_t sand_sector_y
 ) {
-	auto mouse_x_raw = mouse_x;
-	auto mouse_y_raw = mouse_y;
-	auto mouse_x_corrected = mouse_x_raw / pit->grain_size;
-	auto mouse_y_corrected = mouse_y_raw / pit->grain_size;
-
-	if (place_button) {
-		PlaceSandCircle(pit, mouse_x_corrected, PIT_SECTOR_HEIGHT - (mouse_y_corrected), 6);
-	}
-	if (clear_pit) {
-		SandPit_Clear(pit, sand_sector_x, sand_sector_y);
-	}
-
 	SandPit_SimulateStep(pit, sand_sector_x, sand_sector_y);
 }
 
 void SandGame_NewUpdate(SandGame* game) {
-	game->fx_flags = NULL_FX_FLAGS;
-	game->sfx_flags = NULL_SFX_FLAGS;
 }
 
 void SandGame_ThinkEntities(SandGame* game, double dt) {
@@ -410,7 +417,14 @@ void SandGame_ThinkEntities(SandGame* game, double dt) {
 }
 
 bool SandGame_IsFrozen(const SandGame* game) {
-	return game->persistent->frozen_for_s > 0.0;
+	return game->frozen_for_s > 0.0;
+}
+
+void SandGame_HandleFreeze(SandGame* game, double dt) {
+	auto frozen = SandGame_IsFrozen(game);
+	if (frozen)
+		game->frozen_for_s = std::max(0.0, game->frozen_for_s - dt);
+	SandGame_SetSFXFlag(game, SFX_TOGGLE_AMBIENT, !frozen);
 }
 
 void SandGame_Update(SandGame* game, double dt) {
@@ -422,11 +436,7 @@ void SandGame_Update(SandGame* game, double dt) {
 	double player_y = 0;
 
 	SandGame_NewUpdate(game);
-
-	if (SandGame_IsFrozen(game)) {
-		game->persistent->frozen_for_s = std::max(0.0, game->persistent->frozen_for_s - dt);
-		return;
-	}
+	SandGame_HandleFreeze(game, dt);
 
 	AABB player_bbox = game->player.bbox;
 	double player_w = AABB_GetWidth(&player_bbox);
@@ -493,8 +503,8 @@ void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb) 
 	}
 }
 
-void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx) {
-	SoundFXFlags_Set(&game->sfx_flags, sfx);
+void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx, bool to) {
+	SoundFXFlags_Set(&game->sfx_flags, sfx, to);
 }
 
 void SandGame_SetNewLevelPath(SandGame* game, const char* new_level_path) {
@@ -511,10 +521,11 @@ bool SandGame_ShouldLoadNewLevel(const SandGame* game) {
 
 void SandGame_NotifyLevelLoaded(SandGame* game) {
 	game->new_level_path = nullptr;
+	SandGame_SetSFXFlag(game, SFX_TOGGLE_AMBIENT);
 }
 
 void SandGame_FreezeFor(SandGame* game, double s) {
-	game->persistent->frozen_for_s = s;
+	game->frozen_for_s = s;
 }
 
 void SandGame_SetFXFlag(SandGame* game, RenderFX fx) {
@@ -537,6 +548,13 @@ void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, 
 	};
 	AABB_Create(&rect->aabb, top_left_x, top_left_y, w, h);
 	rect->colour = colour;
+	rect->has_graphic = false;
+}
+
+void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, double w, double h, const GameColour colour, GraphicResource graphic) {
+	RectangleObstacle_Create(rect, top_left_x, top_left_y, w, h, colour);
+	rect->has_graphic = true;
+	rect->graphic = graphic;
 }
 
 void RectangleObstacle_Place(Entity* ent, SandGame* game) {
@@ -716,6 +734,27 @@ void Entity_Remove(Entity* _this, SandGame* pit) {
 
 void Entity_Think(Entity* _this, SandGame* game, double dt) {
 	_this->entity.vtable.think_fn(_this, game, dt);
+}
+
+void TexturedRectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, GraphicResource texture) {
+}
+
+void TexturedRectangleObstacle_Place(Entity* rect, SandGame* game) {
+}
+
+bool Player_IsMoving(const Player* player) {
+	return player->x_speed >= 0.1 || player->x_speed <= -0.1;
+}
+
+PlayerDirection Player_GetDirection(const Player* player) {
+	return player->direction;
+}
+
+bool Player_IsGoingFast(const Player* player) {
+	auto x_vel = player->x_speed;
+	auto y_vel = player->y_speed;
+	auto mag_squared = x_vel * x_vel + y_vel * y_vel;
+	return (mag_squared >= PLAYER_IS_GOING_FAST_VELOCITY_THRESHHOLD_SQUARED);
 }
 
 

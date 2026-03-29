@@ -4,13 +4,16 @@
 #include <corecrt_malloc.h>
 #include <string.h>
 #include <cassert>
+#include <cstdlib>
 
 // TODO: add error messages
 
 #define HEADER_MAGIC "level"
 #define SOUND_DEFINITION_COMMAND "sound"
+#define STREAM_DEFINITION_COMMAND "soundstream"
 #define GRAPHIC_DEFINITION_COMMAND "graphic"
 #define ENTITY_DEFINITION_COMMAND "ent"
+#define SAND_DEFINITION_COMMAND "sand"
 #define PNG_FILE_EXTENSION ".png"
 #define JPG_FILE_EXTENSION ".jpg"
 #define JPEG_FILE_EXTENSION ".jpeg"
@@ -213,7 +216,22 @@ bool Level_HandleSoundDefinition(AudioData* audio, SandGameLevelFile* level) {
     if (!file_path_result)
         return false;
 
-	Audio_LoadAndSetResource(audio, rsc, file_path);
+	Audio_LoadAndSetSoundResource(audio, rsc, file_path);
+}
+
+bool Level_HandleStreamDefinition(AudioData* audio, SandGameLevelFile* level) {
+    // [AUDIO_RSC] [FILE_PATH]
+    AudioResource rsc{};
+    auto rsc_result = SandGameLevelFile_ReadInteger(level, (long*)&rsc);
+    if (!rsc_result)
+        return false;
+
+    char* file_path{};
+    auto file_path_result = SandGameLevelFile_ReadStringLiteral(level, &file_path, nullptr);
+    if (!file_path_result)
+        return false;
+
+	Audio_LoadAndSetStreamResource(audio, rsc, file_path);
 }
 
 bool Level_HandleRectDefinition(SandGame* game, SandGameLevelFile* level) {
@@ -250,13 +268,20 @@ bool Level_HandleRectDefinition(SandGame* game, SandGameLevelFile* level) {
     success = SandGameLevelFile_ReadInteger(level, &a);
     if (!success || a > 255 || a < 0) return false;
 
+    GraphicResource rsc;
+    success = SandGameLevelFile_ReadInteger(level, (long*)&rsc);
+    if (!success || a > 255 || a < 0) return false;
+
     GameColour c{};
     c.r = (std::uint8_t)r;
     c.g = (std::uint8_t)g;
     c.b = (std::uint8_t)b;
     c.a = (std::uint8_t)a;
     EntityRectangleObstacle rect;
-    RectangleObstacle_Create(&rect, top_left_x, top_left_y, w, h, c);
+    if (rsc >= 0)
+		RectangleObstacle_Create(&rect, top_left_x, top_left_y, w, h, c, rsc);
+    else
+		RectangleObstacle_Create(&rect, top_left_x, top_left_y, w, h, c);
     SandGame_AddEntity(game, &rect, ENTITY_RECTANGLE);
 
     return true;
@@ -423,17 +448,63 @@ bool Level_HandleGraphicDefinition(RenderData* data, SandGameLevelFile* level) {
     return true;
 }
 
+void Level_PlaceSandRect(
+    SandGame* game,
+    std::uint32_t top_left_x,
+    std::uint32_t top_left_y,
+    std::uint32_t w,
+    std::uint32_t h
+) {
+    auto grain_size = game->pit.grain_size;
+    auto mid_x = (int)top_left_x + (int)w / 2;
+    auto m_recip = (int)game->pit.stubbornness;
+    for (int y = top_left_y; y < top_left_y + h; y++) {
+        for (int x = top_left_x; x < top_left_x + w; x++) {
+            auto pillar_w = (mid_x - x) / m_recip;
+            if (std::abs(x - mid_x) <= pillar_w) {
+                SandPit_PlaceGrain(&game->pit, x/grain_size, y/grain_size, PseudoRandom_GetU32() & 0b11);
+            }
+        }
+    }
+}
+
+bool Level_HandleSandDefinition(SandGame* game, SandGameLevelFile* level) {
+	std::uint32_t top_left_x;
+    auto success = SandGameLevelFile_ReadUnsignedInteger(level, &top_left_x);
+    if (!success) return false;
+
+    std::uint32_t top_left_y;
+    success = SandGameLevelFile_ReadUnsignedInteger(level, &top_left_y);
+    if (!success) return false;
+
+	std::uint32_t w;
+    success = SandGameLevelFile_ReadUnsignedInteger(level, &w);
+    if (!success) return false;
+
+	std::uint32_t h;
+    success = SandGameLevelFile_ReadUnsignedInteger(level, &h);
+    if (!success) return false;
+
+    Level_PlaceSandRect(game, top_left_x, top_left_y, w, h);
+}
+
 bool Level_ProcessCommand(
     AudioData* audio, RenderData* render, SandGame* game, SandGameLevelFile* level, const char* command
 ) {
     if (strcmp(command, SOUND_DEFINITION_COMMAND) == 0) {
         return Level_HandleSoundDefinition(audio, level);
     }
+	else if (strcmp(command, STREAM_DEFINITION_COMMAND) == 0) {
+        return Level_HandleStreamDefinition(audio, level);
+    }
     else if (strcmp(command, ENTITY_DEFINITION_COMMAND) == 0) {
         return Level_HandleEntityDefinition(game, level);
     } 
     else if (strcmp(command, GRAPHIC_DEFINITION_COMMAND) == 0) {
         return Level_HandleGraphicDefinition(render, level);
+    }
+    else if (strcmp(command, SAND_DEFINITION_COMMAND) == 0) {
+        return Level_HandleSandDefinition(game, level);
     }
     else {
         return false;
@@ -454,7 +525,7 @@ bool Level_ProcessFile(AudioData* audio, RenderData* render, SandGame* game, San
     return true;
 }
 
-bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, double* out_player_y, std::uint32_t* out_pit_screens_horizontal, std::uint32_t* out_pit_screens_vertical) {
+bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, double* out_player_y, std::uint32_t* out_pit_screens_horizontal, std::uint32_t* out_pit_screens_vertical, std::uint32_t* out_sand_stubbornness) {
     // level [player_x] [player_y] [pit_size_horizontal] [pit_size_vertical]
     auto result = true;
 
@@ -479,6 +550,10 @@ bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, dou
     if (!result || SandGameLevelFile_IsHalted(level))
         return false;
 
+	result = SandGameLevelFile_ReadUnsignedInteger(level, out_sand_stubbornness);
+    if (!result || SandGameLevelFile_IsHalted(level))
+        return false;
+
     return !SandGameLevelFile_IsHalted(level);
 }
 
@@ -499,7 +574,8 @@ bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, co
     double player_y;
     std::uint32_t pit_screens_horizontal;
     std::uint32_t pit_screens_vertical;
-    auto header_result = Level_ProcessFileHeader(&level, &player_x, &player_y, &pit_screens_horizontal, &pit_screens_vertical);
+    std::uint32_t stubbornness;
+    auto header_result = Level_ProcessFileHeader(&level, &player_x, &player_y, &pit_screens_horizontal, &pit_screens_vertical, &stubbornness);
     if (!header_result)
         return false;
 
@@ -514,14 +590,13 @@ bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, co
         PIT_SECTOR_HEIGHT,
         pit_screens_horizontal,
         pit_screens_vertical,
-        SAND_STUBBORNNESS,
+        stubbornness,
         SAND_SIZE,
         DEFAULT_MAX_ENTITIES,
         persistent
     );
 
     auto success = Level_ProcessFile(audio, render, game, &level);
-
     if (success) {
 		if (last_level_buffer != nullptr)
 			free((void*)last_level_buffer);

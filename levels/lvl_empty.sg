@@ -1,6 +1,30 @@
-level 300.0 150.0 4 1
-sound 0 assets\toast_notif.wav
-sound 1 assets\jump.wav
-sound 2 assets\boom.wav
-sound 3 assets\fuse.wav
-sound 4 assets\door_open.wav
+level 100.0 350.0 4 1 4
+sound 0 "assets\toast_notif.wav"
+sound 1 "assets\jump.wav"
+sound 2 "assets\boom.wav"
+sound 3 "assets\fuse.wav"
+sound 4 "assets\door_open.wav"
+soundstream 5 "assets\ambience.wav"
+soundstream 6 "assets\wind.wav"
+graphic 0 "assets\barrel_cigarette_idle.gif" 0.1
+graphic 1 "assets\barrel_cigarette_explode.png"
+graphic 2 "assets\barrel_kurt_cobarrel_idle.gif" 0.05
+graphic 3 "assets\barrel_kurt_cobarrel_explode.png"
+graphic 4 "assets\barrel_terrorist_idle.gif" 0.05
+graphic 5 "assets\barrel_terrorist_explode.gif" 0.01
+graphic 6 "assets\background.png"
+graphic 7 "assets\player_walking_left.gif" 0.07
+graphic 8 "assets\player_walking.gif" 0.07
+graphic 9 "assets\player_idle_left.png"
+graphic 10 "assets\player_idle.png"
+graphic 11 "assets\grass.png"
+ent 0 0 57 1920 57 255 255 255 255 11
+ent 0 1920 57 1920 57 255 255 255 255 11
+ent 0 3840 57 1920 57 255 255 255 255 11
+ent 1 100 1080 100 1080 "A, D to move. Hold SPACE to jump." 0
+ent 1 2030 1080 50 1080 "W or MOUSE 1 to fire." 0
+ent 0 3456 200 40 220 128 23 72 255 -1
+ent 1 3950 1080 50 1080 "LCTRL to change fire mode." 0
+ent 0 5376 600 40 620 128 23 72 255 -1
+ent 1 5870 1080 50 1080 "Vacuum to refill your ammo." 0
+sand 6896 600 600 600

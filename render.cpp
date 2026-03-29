@@ -206,6 +206,10 @@ void Render_LoadAndSetAnimationResource(RenderData* data, GraphicResource rsc, f
 	GraphicResourceOpt_CreateFromAnimation(&data->resources[rsc], refresh_period_s, file_path);
 }
 
+float Render_GetFrameTime() {
+	return GetFrameTime();
+}
+
 bool Render_IsGraphicResourceLoaded(const RenderData* data, GraphicResource rsc) {
 	if (rsc < 0 || rsc >= GRAPHIC_RSC_MAX)
 		return false;
@@ -246,7 +250,7 @@ std::uint32_t Render_GetGraphicResourceHeight(const RenderData* data, GraphicRes
 	return GraphicResourceOpt_GetHeight(resource);
 }
 
-void RenderRectangleObstacle(const RenderData* data, const EntityRectangleObstacle* rect) {
+void RenderRectangleObstacle(RenderData* data, const EntityRectangleObstacle* rect, float dt_s) {
 	double top_left_x_w = 0;
 	double top_left_y_w = 0;
 	double bottom_right_x_w = 0;
@@ -264,7 +268,11 @@ void RenderRectangleObstacle(const RenderData* data, const EntityRectangleObstac
 	auto w = bottom_right_x - top_left_x;
 	auto h = bottom_right_y - top_left_y;
 	auto color = GameColourToRaylibColor(&rect->colour);
-	DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);
+
+	if (!rect->has_graphic)
+		DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);
+	else
+		Render_DrawGraphicResource(data, rect->graphic, top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, color, dt_s);
 }
 
 void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
@@ -309,7 +317,7 @@ void RenderLevelDoor(RenderData* data, const EntityLevelDoor* door, float dt_s) 
 
 void RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
 	switch (entity->type) {
-		case ENTITY_RECTANGLE: { RenderRectangleObstacle(renderer, &entity->entity.rect); break; }
+		case ENTITY_RECTANGLE: { RenderRectangleObstacle(renderer, &entity->entity.rect, dt_s); break; }
 		case ENTITY_HINT_BOX: { /* pass */ break; }
 		case ENTITY_BARREL: { RenderBarrel(renderer, &entity->entity.barrel, dt_s); break; }
 		case ENTITY_LEVEL_DOOR: { RenderLevelDoor(renderer, &entity->entity.door, dt_s); break; }
@@ -343,11 +351,21 @@ void ResetRenderCamera(RenderCamera* camera) {
 	camera->h = WINDOW_HEIGHT;
 }
 
-void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name) {
+void Render_InitWindow(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, const char* window_name) {
 	InitWindow(window_w, window_h, window_name);
+	ToggleBorderlessWindowed();
+}
+
+void Render_SetSkybox(RenderData* data, GraphicResource skybox) {
+	data->skybox = skybox;
+}
+
+void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name, GraphicResource skybox) {
+	Render_InitWindow(data, window_w, window_h, window_name);
 	SetTargetFPS(fps);
 	ResetRenderCamera(&data->camera);
 	InitSandTexture(data);
+	Render_SetSkybox(data, skybox);
 }
 
 void Render_FreeSandData(RenderData* data) {
@@ -369,8 +387,6 @@ void Render_Shutdown(RenderData* renderer) {
 
 void BeginRendering() {
 	BeginDrawing();
-	ClearBackground(RENDER_BACKGROUND_COLOR);
-	DrawFPS(20, 20);
 }
 
 void EndRendering() {
@@ -401,24 +417,52 @@ void Render_RenderSand(const RenderData* r, const SandPit* pit) {
     DrawTextureEx(r->sand_texture, {0, 0}, 0.0, (float)grain_size, WHITE);
 }
 
-void Render_RenderPlayer(const RenderData* r, const Player* player) {
+void Render_RenderPlayer(RenderData* r, const Player* player, float dt_s) {
+	auto direction = Player_GetDirection(player);
+	auto graphic = (direction == PLAYER_FACING_LEFT) ? GRAPHIC_RSC_PLAYER_IDLE_LEFT : GRAPHIC_RSC_PLAYER_IDLE_RIGHT;
+	if (Player_IsMoving(player))
+		graphic = (direction == PLAYER_FACING_LEFT) ? GRAPHIC_RSC_PLAYER_WALK_LEFT : GRAPHIC_RSC_PLAYER_WALK_RIGHT;
+
 	auto start_x = r->camera.start_x;
 	auto start_y = r->camera.start_y;
 	double player_x_w = 0;
 	double player_y_w = 0;
-	AABB_GetCornerCoords(&player->bbox, AABB_TOP_LEFT, &player_x_w, &player_y_w);
-	double player_w = AABB_GetWidth(&player->bbox);
-	double player_h = AABB_GetHeight(&player->bbox);
+	AABB_GetCornerCoords(&player->bbox, AABB_BOTTOM, &player_x_w, &player_y_w);
+	double player_w = Render_GetGraphicResourceWidth(r, graphic);
+	double player_h = Render_GetGraphicResourceHeight(r, graphic);
 
 	double player_x = 0;
 	double player_y = 0;
 	WorldToScreen(player_x_w, player_y_w, &player_x, &player_y);
-	Rectangle player_rect = { 
-		player_x - start_x, 
-		player_y - start_y, 
-		player_w, player_h 
-	};
-	DrawRectangleRec(player_rect, RED);
+	Render_DrawGraphicResource(r, graphic, player_x - player_w / 2.0 - start_x, player_y - player_h - start_y, WHITE, dt_s);
+
+	//constexpr auto PLAYER_TRAIL_SCALER = 15.0;
+	//if (Player_IsGoingFast(player)) {
+	//	auto x_vel = player->x_speed;
+	//	auto y_vel = player->y_speed;
+	//	auto vel_mag = sqrt(x_vel * x_vel + y_vel * y_vel);
+	//	auto trail_displacement_x = -(x_vel / vel_mag) * scale * PLAYER_TRAIL_SCALER;
+	//	auto trail_displacement_y = (y_vel / vel_mag) * scale * PLAYER_TRAIL_SCALER;
+	//
+	//	// Draw Trail
+	//	player_color.g = 255;
+	//	player_color.r = 5;
+	//	player_color.a *= 0.7;
+	//	Rectangle player_rect_trail_1 = { 
+	//		player_x - start_x + trail_displacement_x, 
+	//		player_y - start_y + trail_displacement_y, 
+	//		player_w, player_h 
+	//	};
+	//	DrawRectangleRec(player_rect_trail_1, player_color);
+
+	//	player_color.a *= 0.9;
+	//	Rectangle player_rect_trail_2 = { 
+	//		player_x - start_x + trail_displacement_x + trail_displacement_x, 
+	//		player_y - start_y + trail_displacement_y + trail_displacement_y, 
+	//		player_w, player_h 
+	//	};
+	// 	DrawRectangleRec(player_rect_trail_2, player_color);
+	//}
 }
 
 void Render_MoveCamera(RenderCamera* camera, const SandGame* game) {
@@ -435,16 +479,17 @@ void Render_MoveCamera(RenderCamera* camera, const SandGame* game) {
 }
 
 // Effects are drawn in UI stage.
-void Render_ProcessFx(RenderData* r, const SandGame* game) {
-	if (RenderFXFlags_Get(game->fx_flags, FX_REFRESH_TOAST)) {
+void Render_ProcessFx(RenderData* r, RenderFXFlags* fx_flags) {
+	if (RenderFXFlags_Get(*fx_flags, FX_REFRESH_TOAST)) {
 		r->toast_display_duration = FX_TOAST_DISPLAY_DURATION;
 	} 
-	if (RenderFXFlags_Get(game->fx_flags, FX_WHITE_FLASH)) {
+	if (RenderFXFlags_Get(*fx_flags, FX_WHITE_FLASH)) {
 		r->white_flash_duration = FX_WHITE_FLASH_DURATION_S;
 	}
-	if (RenderFXFlags_Get(game->fx_flags, FX_BLACK_FADE_IN_OUT)) {
+	if (RenderFXFlags_Get(*fx_flags, FX_BLACK_FADE_IN_OUT)) {
 		r->black_fade_in_out_duration = FX_BLACK_FADE_IN_DURATION_S + FX_BLACK_FADE_OUT_DURATION_S;
 	}
+	*fx_flags = NULL_FX_FLAGS;
 }
 
 void Render_RenderToast(RenderData* r, const SandGame* game, float dt_s) {
@@ -470,7 +515,7 @@ void Render_RenderToast(RenderData* r, const SandGame* game, float dt_s) {
 void Render_RenderPlayerWeaponType(RenderData* r, const SandGame* game, float dt_s) {
 	constexpr const char* weapon_names[FIRE_TYPE_MAX]{
 		"Stream",
-		"Burst",													
+		"Place",													
 		"Vacuum"
 	};
 
@@ -537,15 +582,22 @@ void Render_RenderUI(RenderData* r, const SandGame* game, float dt_s) {
 	Render_RenderToast(r, game, dt_s);
 	Render_RenderWhiteFlash(r, dt_s);
 	Render_RenderBlackFadeInOut(r, dt_s);
+	DrawFPS(20, 20);
 }
 
-void Render_RenderGame(RenderData* r, const SandGame* game, float dt_s) {
+void Render_DrawSkybox(RenderData* r, float dt_s) {
+	assert(Render_IsGraphicResourceLoaded(r, r->skybox));
+	Render_DrawGraphicResource(r, r->skybox, 0, 0, WHITE, dt_s);
+}
+
+void Render_RenderGame(RenderData* r, SandGame* game, float dt_s) {
 	BeginRendering();
 
 	Render_MoveCamera(&r->camera, game);
-	Render_ProcessFx(r, game);
+	Render_DrawSkybox(r, dt_s);
+	Render_ProcessFx(r, &game->fx_flags);
 	Render_RenderEntities(r, game, dt_s);
-	Render_RenderPlayer(r, &game->player);
+	Render_RenderPlayer(r, &game->player, dt_s);
 	Render_RenderSand(r, &game->pit);
 	Render_RenderUI(r, game, dt_s);
 
