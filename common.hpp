@@ -23,7 +23,7 @@ enum AudioResource : std::int32_t {			// Index into AudioData.sounds
 	AUDIO_RSC_DOOR_OPEN,
 	AUDIO_RSC_AMBIENT,
 	AUDIO_RSC_WIND,
-	AUDIO_RSC_MAX
+	AUDIO_RSC_MAX = 32
 };
 enum GraphicResource : std::int32_t {	
 	GRAPHIC_RSC_BARREL_CIGARETTE_IDLE,			// Index into RenderData.graphics
@@ -38,6 +38,13 @@ enum GraphicResource : std::int32_t {
 	GRAPHIC_RSC_PLAYER_IDLE_LEFT,
 	GRAPHIC_RSC_PLAYER_IDLE_RIGHT,
 	GRAPHIC_RSC_GRASS_FLOOR,
+	GRAPHIC_RSC_BARREL_DEFUSED,
+	GRAPHIC_RSC_LADYBIRD_IDLE_LEFT,
+	GRAPHIC_RSC_LADYBIRD_IDLE_RIGHT,
+	GRAPHIC_RSC_LADYBIRD_WALK_LEFT,
+	GRAPHIC_RSC_LADYBIRD_WALK_RIGHT,
+	GRAPHIC_RSC_LADYBIRD_SHOCKED,
+	GRAPHIC_RSC_LADYBIRD_FLIGHT,
 	GRAPHIC_RSC_MAX,
 };
 enum RenderFX {
@@ -68,6 +75,7 @@ enum GameAction {
 	ACTION_MAX = 1 << 8// Remeber to update me!
 };
 
+SoundFX SoundFX_FromResource(AudioResource rsc);
 bool RenderFXFlags_Get(RenderFXFlags flags, RenderFX flag);
 void RenderFXFlags_Set(RenderFXFlags* flags, RenderFX flag, bool to=true);
 bool SoundFXFlags_Get(SoundFXFlags flags, SoundFX flag);

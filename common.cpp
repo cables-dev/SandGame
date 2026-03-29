@@ -1,6 +1,10 @@
 #include "common.hpp"
 #include <cassert>
 
+SoundFX SoundFX_FromResource(AudioResource rsc) {
+	return (SoundFX)(1 << rsc);
+}
+
 bool RenderFXFlags_Get(RenderFXFlags flags, RenderFX flag) {
 	return flags & flag;
 }

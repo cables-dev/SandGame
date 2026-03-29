@@ -8,7 +8,7 @@
 #include <utility>
 #include <cstdlib>
 
-int PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, SandPitQueryResult* out_region_query=nullptr) {
+int PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, SandPitQueryResult* out_region_query) {
 	auto num_placed = 0;
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
@@ -82,7 +82,7 @@ void Player_PlayerMovementSounds(Player* player, SoundFXFlags* flags) {
 }
 
 void Player_UpdateDirection(Player* player) {
-	player->direction = player->x_speed > 0.0 ? PLAYER_FACING_RIGHT : PLAYER_FACING_LEFT;
+	player->direction = player->x_speed > 0.0 ? ENTITY_FACING_RIGHT : ENTITY_FACING_LEFT;
 }
 
 void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, bool jump, float dt) {
@@ -362,13 +362,16 @@ void SandGame_DestroyEntityList(SandGame* game) {
 	game->entities_head = nullptr;
 }
 
-void SandGame_Create(SandGame* game, double player_x, double player_y, double player_w, double player_h, std::uint32_t pit_w, std::uint32_t pit_h, std::uint32_t pit_num_screens_horizontal, std::uint32_t pit_num_screens_vertical, std::uint32_t pit_stubbornness, std::uint16_t pit_grain_size, std::uint32_t max_entities, SandGamePersistentState* persistent) {
+void SandGame_Create(SandGame* game, double player_x, double player_y, double player_w, double player_h, std::uint32_t pit_w, std::uint32_t pit_h, std::uint32_t pit_num_screens_horizontal, std::uint32_t pit_num_screens_vertical, std::uint32_t pit_stubbornness, std::uint16_t pit_grain_size, std::uint32_t max_entities, SandGamePersistentState* persistent, bool do_timer) {
 	Player_Create(&game->player, player_x, player_y, player_w, player_h);
 	SandPit_Create(&game->pit, pit_w, pit_h, pit_num_screens_horizontal, pit_num_screens_vertical, pit_stubbornness, pit_grain_size);
 	SandGame_CreateEntityList(game, max_entities);
+	game->do_time_tick = do_timer;
 
-	if (persistent == nullptr)
+	if (persistent == nullptr) {
 		game->persistent = (SandGamePersistentState*)malloc(sizeof(SandGamePersistentState));
+		memset(game->persistent, 0, sizeof(SandGamePersistentState));
+	}
 	else
 		game->persistent = persistent;
 }
@@ -401,7 +404,10 @@ void UpdateSandPit(
 	SandPit_SimulateStep(pit, sand_sector_x, sand_sector_y);
 }
 
-void SandGame_NewUpdate(SandGame* game) {
+// Returns true if we should skip this frame
+bool SandGame_NewUpdate(SandGame* game) {
+	game->skip_frame = std::max(0, game->skip_frame - 1);
+	return game->skip_frame > 0;
 }
 
 void SandGame_ThinkEntities(SandGame* game, double dt) {
@@ -427,6 +433,15 @@ void SandGame_HandleFreeze(SandGame* game, double dt) {
 	SandGame_SetSFXFlag(game, SFX_TOGGLE_AMBIENT, !frozen);
 }
 
+bool SandGame_ShouldTickTimer(const SandGame* game) {
+	return (!SandGame_IsFrozen(game) && game->do_time_tick);
+}
+
+void SandGame_HandleTimeElapse(SandGame* game, double dt_s) {
+	if (SandGame_ShouldTickTimer(game) && game->persistent) 
+		game->persistent->elapsed_s += dt_s;
+}
+
 void SandGame_Update(SandGame* game, double dt) {
 	std::uint32_t sector_x;
 	std::uint32_t sector_y;
@@ -435,8 +450,12 @@ void SandGame_Update(SandGame* game, double dt) {
 	double player_x = 0;
 	double player_y = 0;
 
-	SandGame_NewUpdate(game);
+	auto first_frame = SandGame_NewUpdate(game);
 	SandGame_HandleFreeze(game, dt);
+	SandGame_HandleTimeElapse(game, dt);
+
+	if (SandGame_IsFrozen(game) || first_frame)
+		return;
 
 	AABB player_bbox = game->player.bbox;
 	double player_w = AABB_GetWidth(&player_bbox);
@@ -528,17 +547,36 @@ void SandGame_FreezeFor(SandGame* game, double s) {
 	game->frozen_for_s = s;
 }
 
+double SandGame_GetElapsedSeconds(const SandGame* game) {
+	if (!game->persistent)
+		return 0.0;
+	return game->persistent->elapsed_s;
+}
+
+bool SandGame_IsLockFlagUnLocked(const SandGame* game, int lock_flag) {
+	if (!game->persistent)
+		return false;
+	return game->persistent->door_lock_flags & (1 << lock_flag);
+}
+
+void SandGame_SetUnLockFlag(const SandGame* game, int lock_flag, bool to) {
+	if (!game->persistent)
+		return;
+	if (to)
+		game->persistent->door_lock_flags |= (1 << lock_flag);
+	else
+		game->persistent->door_lock_flags &= ~(1 << lock_flag);
+}
+
 void SandGame_SetFXFlag(SandGame* game, RenderFX fx) {
 	RenderFXFlags_Set(&game->fx_flags, fx);
 }
 
-void SandGame_SetToast(SandGame* game, const char* toast) {
+void SandGame_SetToast(SandGame* game, const char* toast, bool do_sound) {
 	game->toast = toast;
 	SandGame_SetFXFlag(game, FX_REFRESH_TOAST);
-	SandGame_SetSFXFlag(game, SFX_TOAST_NOTIFY);
+	if (do_sound) SandGame_SetSFXFlag(game, SFX_TOAST_NOTIFY);
 }
-
-
 
 void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, double w, double h, const GameColour colour) {
 	rect->vtable = {
@@ -581,8 +619,23 @@ void HintBox_Create(EntityHintBox* box, const char* message, bool only_once, dou
 	};
 	AABB_Create(&box->aabb, top_left_x, top_left_y, w, h);
 	box->message = message;
-	box->triggered = false;
+	box->already_triggered = false;
 	box->only_once = only_once;
+	box->has_sound = false;
+}
+
+void HintBox_Create(EntityHintBox* box, const char* message, bool only_once, double top_left_x, double top_left_y, double w, double h, AudioResource rsc) {
+	box->vtable = {
+		HintBox_Place,
+		HintBox_Remove,
+		HintBox_Think
+	};
+	AABB_Create(&box->aabb, top_left_x, top_left_y, w, h);
+	box->message = message;
+	box->already_triggered = false;
+	box->only_once = only_once;
+	box->has_sound = true;
+	box->audio_rsc = rsc;
 }
 
 void HintBox_Place(Entity* box, SandGame* game) {
@@ -593,15 +646,26 @@ void HintBox_Remove(Entity* box, SandGame* game) {
 	// pass
 }
 
+bool HintBox_HasAudio(const EntityHintBox* box) {
+	return box->has_sound;
+}
+
+void HintBox_OnTrigger(EntityHintBox* box, SandGame* game) {
+	box->already_triggered = true;
+	auto has_audio = HintBox_HasAudio(box);
+	if (has_audio)
+		SandGame_SetSFXFlag(game, SoundFX_FromResource(box->audio_rsc));
+	SandGame_SetToast(game, box->message, !has_audio);
+}
+
 void HintBox_Think(Entity* e, SandGame* game, double dt) {
 	auto* box = &e->entity.hint_box;
-	auto intersects = AABB_Intersects(&box->aabb, &game->player.bbox);
-	if (!box->triggered && intersects) {
-		box->triggered = true;
-		SandGame_SetToast(game, box->message);
+	auto intersects_player = AABB_Intersects(&box->aabb, &game->player.bbox);
+	if (!box->already_triggered && intersects_player) {
+		HintBox_OnTrigger(box, game);
 	} 
-	if (!intersects && !box->only_once) {								// Setup hint for another trigger
-		box->triggered = false;
+	if (!intersects_player && !box->only_once) {	// Setup hint for another trigger
+		box->already_triggered = false;
 	}
 }
 
@@ -656,13 +720,18 @@ void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 	auto* barrel = &ent->entity.barrel;
 	barrel->sprite_changed = false;
 
+	if (barrel->defused)
+		return;
+
 	// Smothered
 	auto* world = &game->pit;
 	auto barrel_aabb = barrel->aabb;
 	AABB_ScaleByReciprocal(&barrel_aabb, game->pit.grain_size);
 	auto smother_query = SandPit_QueryRegion(world, &barrel_aabb);
+
 	if (smother_query.grain_count >= 0.7 * (smother_query.w * smother_query.h)) {
-		return;
+		barrel->defused = true;
+		barrel->sprite_changed = true;
 	}
 
 	// Explode check
@@ -680,7 +749,7 @@ void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 	}
 }
 
-void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_y, double w, double h, const char* next_level_path) {
+void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_y, double w, double h, const char* next_level_path, int lock_flag, int unlock_flag) {
 	door->vtable = {
 		LevelDoor_Place,
 		LevelDoor_Remove,
@@ -688,6 +757,8 @@ void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_
 	};
 	AABB_Create(&door->aabb, top_left_x, top_left_y, w, h);
 	door->next_level_path = next_level_path;
+	door->lock_flag = lock_flag;
+	door->unlock_flag = unlock_flag;
 }
 
 void LevelDoor_Place(Entity* ent, SandGame* game) {
@@ -696,16 +767,193 @@ void LevelDoor_Place(Entity* ent, SandGame* game) {
 void LevelDoor_Remove(Entity* ent, SandGame* game) {
 }
 
+bool LevelDoor_HasLock(EntityLevelDoor* door) {
+	return door->lock_flag != -1;
+}
+
+bool LevelDoor_IsUnlocked(EntityLevelDoor* door, const SandGame* game) {
+	if (LevelDoor_HasLock(door))
+		return SandGame_IsLockFlagUnLocked(game, door->lock_flag);
+	return true;
+}
+
+bool LevelDoor_UnlocksAnother(EntityLevelDoor* door) {
+	return door->unlock_flag != -1;
+}
+
+void LevelDoor_TryOpen(EntityLevelDoor* door, SandGame* game) {
+	if (!LevelDoor_IsUnlocked(door, game)) {
+		SandGame_SetToast(game, "This door is locked!");
+	}
+	else {
+		SandGame_SetSFXFlag(game, SFX_DOOR_OPEN);
+		SandGame_SetFXFlag(game, FX_BLACK_FADE_IN_OUT);
+		SandGame_FreezeFor(game, DOOR_LOADING_DELAY_S);
+		SandGame_SetNewLevelPath(game, door->next_level_path);
+		if (LevelDoor_UnlocksAnother(door))
+			SandGame_SetUnLockFlag(game, door->unlock_flag, true);
+	}
+}
+
 void LevelDoor_Think(Entity* ent, SandGame* game, double dt) {
 	auto* door = &ent->entity.door;
 	if (AABB_Intersects(&door->aabb, &game->player.bbox)) {
 		if (GameActionFlags_Get(game->action_flags_pressed, ACTION_INTERACT)) {
 			// Load new level
-			SandGame_SetSFXFlag(game, SFX_DOOR_OPEN);
-			SandGame_SetFXFlag(game, FX_BLACK_FADE_IN_OUT);
-			SandGame_FreezeFor(game, DOOR_LOADING_DELAY_S);
-			SandGame_SetNewLevelPath(game, door->next_level_path);
+			LevelDoor_TryOpen(door, game);
 		}
+	}
+}
+
+void Ladybird_GetFeet(const EntityLadybird* ladybird, double* out_x, double* out_y) {
+	AABB_GetCornerCoords(&ladybird->aabb, AABB_BOTTOM_LEFT, out_x, out_y);
+}
+
+void Ladybird_Create(EntityLadybird* ladybird, double x, double y) {
+	ladybird->vtable = {
+		Ladybird_Place,
+		Ladybird_Remove,
+		Ladybird_Think
+	};
+	AABB_Create(&ladybird->aabb, x, y + LADYBIRD_HEIGHT, LADYBIRD_WIDTH, LADYBIRD_HEIGHT);
+	ladybird->time_until_move = LADYBIRD_MOVE_TRY_DELAY_S;
+}
+
+void Ladybird_Place(Entity* ent, SandGame* game) {
+	// nop
+}
+
+void Ladybird_Remove(Entity* ent, SandGame* game) {
+	// nop
+}
+
+void Ladybird_SetState(EntityLadybird* ladybird, LadybirdState state) {
+	ladybird->state = state;
+	ladybird->new_state = true;
+}
+
+void Ladybird_StartMove(EntityLadybird* ladybird) {
+	Ladybird_GetFeet(ladybird, &ladybird->move_to_x, &ladybird->move_to_y);
+	ladybird->move_to_x += -ladybird->last_move;
+	ladybird->direction = (ladybird->last_move < 0.0) ? ENTITY_FACING_RIGHT : ENTITY_FACING_LEFT;
+	ladybird->last_move = -ladybird->last_move;
+	Ladybird_SetState(ladybird, LADYBIRD_MOVING);
+}
+
+void Ladybird_ThinkIdle(EntityLadybird* ladybird, const Player* player, double dt_s) {
+	// walk
+	if (ladybird->time_until_move - dt_s <= 0.0) {
+		Ladybird_StartMove(ladybird);
+		ladybird->time_until_move = LADYBIRD_MOVE_TRY_DELAY_S;
+	}
+	else {
+		ladybird->time_until_move -= dt_s;
+	}
+}
+
+// Does not check for collisions
+void Ladybird_ThinkMoving(EntityLadybird* ladybird, const Player* player, double dt_s) {
+	if (ladybird->state != LADYBIRD_MOVING)
+		return;
+	double x;
+	double feet_y;
+	Ladybird_GetFeet(ladybird, &x, &feet_y);
+
+	auto distance_left = ladybird->move_to_x - x;
+	auto dx = LADYBIRD_SPEED_X * dt_s;
+	auto is_final_step = (distance_left < 0.0) ? (distance_left + dx) > 0.0 : (distance_left - dx) < 0.0;
+	if (is_final_step) {
+		x = ladybird->move_to_x;
+		Ladybird_SetState(ladybird, LADYBIRD_IDLE);
+		ladybird->time_until_move = LADYBIRD_MOVE_TRY_DELAY_S;
+	}
+	else {
+		(distance_left < 0.0) ? AABB_MoveBy(&ladybird->aabb, -dx, 0) : AABB_MoveBy(&ladybird->aabb, dx, 0);;
+	}
+}
+
+bool Ladybird_HasSeenPlayer(EntityLadybird* ladybird) {
+	return ladybird->state == LADYBIRD_FLIGHT || ladybird->state == LADYBIRD_SHOCKED;
+}
+
+void Ladybird_OnPlayerEnterVision(EntityLadybird* ladybird, Player* player) {
+	if (Player_IsGoingFast(player)) {
+		Ladybird_SetState(ladybird, LADYBIRD_SHOCKED);
+	}
+	else {
+		Ladybird_SetState(ladybird, LADYBIRD_FLIGHT);
+	}
+}
+
+void Ladybird_ThinkShocked(Entity* ent, SandGame* game, double dt_s) {
+	auto* ladybird = &ent->entity.ladybird;
+	auto* player = &game->player;
+
+	if (!Player_IsGoingFast(player) || player->bbox.top_left_x > ladybird->aabb.top_left_x)
+		Ladybird_SetState(ladybird, LADYBIRD_FLIGHT);
+	else {		// Check for collision
+		if (AABB_Intersects(&player->bbox, &ladybird->aabb)) {
+			// squish
+			SandGame_RemoveEntity(game, ent);
+		}
+	}
+}
+
+constexpr auto LADYBIRD_FLIGHT_PATH_UNIT_X = 0.707107;		// sqrt(2)/2
+constexpr auto LADYBIRD_FLIGHT_PATH_UNIT_Y = 0.707107;		// sqrt(2)/2
+void Ladybird_ThinkFlight(Entity* ent, SandGame* game, double dt_s) {
+	auto* ladybird = &ent->entity.ladybird;
+	auto* player = &game->player;
+	auto dx = LADYBIRD_FLIGHT_SPEED * dt_s * LADYBIRD_FLIGHT_PATH_UNIT_X;
+	auto dy = LADYBIRD_FLIGHT_SPEED * dt_s * LADYBIRD_FLIGHT_PATH_UNIT_Y;
+	AABB_MoveBy(&ladybird->aabb, dx, dy);
+
+	auto player_x = 0.0;
+	auto player_y = 0.0;
+	AABB_GetCornerCoords(&player->bbox, AABB_BOTTOM, &player_x, &player_y);
+
+	auto x = 0.0;
+	auto feet_y = 0.0;
+	AABB_GetCornerCoords(&ladybird->aabb, AABB_BOTTOM_LEFT, &x, &feet_y);
+
+	dx = player_x - x;
+	dy = player_y - feet_y;
+	auto distance = sqrt(dx * dx + dy * dy);
+	if (distance >= LADYBIRD_DESPAWN_DISTANCE) {
+		SandGame_RemoveEntity(game, ent);
+	}
+}
+
+bool Ladybird_CanSeePlayer(const EntityLadybird* ladybird, const Player* player) {
+	auto player_x = 0.0;
+	auto player_y = 0.0;
+	AABB_GetCornerCoords(&player->bbox, AABB_BOTTOM, &player_x, &player_y);
+	auto x = 0.0;
+	auto feet_y = 0.0;
+	AABB_GetCornerCoords(&ladybird->aabb, AABB_BOTTOM_LEFT, &x, &feet_y);
+
+	auto dx = x - player_x;
+	auto dy = feet_y - player_y;
+	auto distance = sqrt(dx * dx + dy * dy);
+	return (distance < LADYBIRD_VISION_DISTANCE);
+}
+
+void Ladybird_Think(Entity* ent, SandGame* game, double dt_s) {
+	auto* ladybird = &ent->entity.ladybird;
+	auto* player = &game->player;
+	ladybird->new_state = false;
+
+	// Check if crushed
+
+	if (Ladybird_CanSeePlayer(ladybird, player) && !Ladybird_HasSeenPlayer(ladybird)) {
+		Ladybird_OnPlayerEnterVision(ladybird, player);
+	}
+	
+	switch (ladybird->state) {
+	case LADYBIRD_IDLE: { Ladybird_ThinkIdle(ladybird, player, dt_s); break; }
+	case LADYBIRD_MOVING: { Ladybird_ThinkMoving(ladybird, player, dt_s); break; }
+	case LADYBIRD_SHOCKED: { Ladybird_ThinkShocked(ent, game, dt_s); break; }
+	case LADYBIRD_FLIGHT: { Ladybird_ThinkFlight(ent, game, dt_s); break; }
 	}
 }
 
@@ -717,6 +965,7 @@ Entity Entity_CreateFrom(void* instance, EntityType type)
 	case ENTITY_HINT_BOX: { memcpy_s(&result, sizeof(result), instance, sizeof(EntityHintBox)); break; }
 	case ENTITY_BARREL: { memcpy_s(&result, sizeof(result), instance, sizeof(EntityBarrel)); break; }
 	case ENTITY_LEVEL_DOOR: { memcpy_s(&result, sizeof(result), instance, sizeof(EntityLevelDoor)); break; }
+	case ENTITY_LADYBIRD: { memcpy_s(&result, sizeof(result), instance, sizeof(EntityLadybird)); break; }
 	default: { assert("Entity_CreateFrom: Unaccounted entity type encountered." && false); }
 	}
 
@@ -746,7 +995,7 @@ bool Player_IsMoving(const Player* player) {
 	return player->x_speed >= 0.1 || player->x_speed <= -0.1;
 }
 
-PlayerDirection Player_GetDirection(const Player* player) {
+EntityDirection Player_GetDirection(const Player* player) {
 	return player->direction;
 }
 

@@ -312,8 +312,15 @@ bool Level_HandleHintBoxDefinition(SandGame* game, SandGameLevelFile* level) {
     success = SandGameLevelFile_ReadInteger(level, &only_once);
     if (!success || (only_once != 1 && only_once != 0)) return false;
 
+    AudioResource audio_rsc;
+    success = SandGameLevelFile_ReadInteger(level, (long*)&audio_rsc);
+    if (!success || (only_once != 1 && only_once != 0)) return false;
+
     EntityHintBox hint;
-    HintBox_Create(&hint, message, only_once, top_left_x, top_left_y, w, h);
+    if (audio_rsc == -1)
+		HintBox_Create(&hint, message, only_once, top_left_x, top_left_y, w, h);
+    else
+		HintBox_Create(&hint, message, only_once, top_left_x, top_left_y, w, h, audio_rsc);
     SandGame_AddEntity(game, &hint, ENTITY_HINT_BOX);
 
     return true;
@@ -372,11 +379,33 @@ bool Level_HandleLevelDoorDefinition(SandGame* game, SandGameLevelFile* level) {
     success = SandGameLevelFile_ReadStringLiteral(level, &next_level_path, nullptr);
     if (!success) return false;
 
+	long lock_flag;
+    success = SandGameLevelFile_ReadInteger(level, &lock_flag);
+    if (!success) return false;
+
+	long unlock_flag;
+    success = SandGameLevelFile_ReadInteger(level, &unlock_flag);
+    if (!success) return false;
+
 	EntityLevelDoor door;
-	LevelDoor_Create(&door, 1200, 100, 50, 100, next_level_path);
+	LevelDoor_Create(&door, top_left_x, top_left_y, w, h, next_level_path, lock_flag, unlock_flag);
     SandGame_AddEntity(game, &door, ENTITY_LEVEL_DOOR);
 
     return success;
+}
+
+bool Level_HandleLadybirdDefinition(SandGame* game, SandGameLevelFile* level) {
+	double bottom_left_x;
+    auto success = SandGameLevelFile_ReadDouble(level, &bottom_left_x);
+    if (!success) return false;
+
+    double bottom_left_y;
+    success = SandGameLevelFile_ReadDouble(level, &bottom_left_y);
+    if (!success) return false;
+
+    EntityLadybird ladybird;
+    Ladybird_Create(&ladybird, bottom_left_x, bottom_left_y);
+    SandGame_AddEntity(game, &ladybird, ENTITY_LADYBIRD);
 }
 
 bool Level_HandleEntityDefinition(SandGame* game, SandGameLevelFile* level) {
@@ -390,6 +419,7 @@ bool Level_HandleEntityDefinition(SandGame* game, SandGameLevelFile* level) {
 		case ENTITY_HINT_BOX: { return Level_HandleHintBoxDefinition(game, level); }
 		case ENTITY_BARREL: { return Level_HandleBarrelDefinition(game, level); }
 		case ENTITY_LEVEL_DOOR: { return Level_HandleLevelDoorDefinition(game, level); }
+		case ENTITY_LADYBIRD: { return Level_HandleLadybirdDefinition(game, level); }
 		default: { assert("Level_HandleEntityDefinition: Unaccounted entity type encountered." && false); }
     }
 }
@@ -485,7 +515,7 @@ bool Level_HandleSandDefinition(SandGame* game, SandGameLevelFile* level) {
     success = SandGameLevelFile_ReadUnsignedInteger(level, &h);
     if (!success) return false;
 
-    Level_PlaceSandRect(game, top_left_x, top_left_y, w, h);
+    (game, top_left_x, top_left_y, w, h);
 }
 
 bool Level_ProcessCommand(
@@ -525,8 +555,8 @@ bool Level_ProcessFile(AudioData* audio, RenderData* render, SandGame* game, San
     return true;
 }
 
-bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, double* out_player_y, std::uint32_t* out_pit_screens_horizontal, std::uint32_t* out_pit_screens_vertical, std::uint32_t* out_sand_stubbornness) {
-    // level [player_x] [player_y] [pit_size_horizontal] [pit_size_vertical]
+bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, double* out_player_y, std::uint32_t* out_pit_screens_horizontal, std::uint32_t* out_pit_screens_vertical, std::uint32_t* out_sand_stubbornness, bool* out_do_tick) {
+    // level [player_x] [player_y] [pit_size_horizontal] [pit_size_vertical] [stubbornness] [do_timer]
     auto result = true;
 
 	char* command_word;
@@ -554,6 +584,12 @@ bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, dou
     if (!result || SandGameLevelFile_IsHalted(level))
         return false;
 
+    auto do_tick = 0u;
+	result = SandGameLevelFile_ReadUnsignedInteger(level, &do_tick);
+    if (!result || SandGameLevelFile_IsHalted(level))
+        return false;
+    *out_do_tick = (do_tick != 0);
+
     return !SandGameLevelFile_IsHalted(level);
 }
 
@@ -575,7 +611,8 @@ bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, co
     std::uint32_t pit_screens_horizontal;
     std::uint32_t pit_screens_vertical;
     std::uint32_t stubbornness;
-    auto header_result = Level_ProcessFileHeader(&level, &player_x, &player_y, &pit_screens_horizontal, &pit_screens_vertical, &stubbornness);
+    bool do_tick;
+    auto header_result = Level_ProcessFileHeader(&level, &player_x, &player_y, &pit_screens_horizontal, &pit_screens_vertical, &stubbornness, &do_tick);
     if (!header_result)
         return false;
 
@@ -593,10 +630,12 @@ bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, co
         stubbornness,
         SAND_SIZE,
         DEFAULT_MAX_ENTITIES,
-        persistent
+        persistent,
+        do_tick
     );
 
     auto success = Level_ProcessFile(audio, render, game, &level);
+    assert(success);
     if (success) {
 		if (last_level_buffer != nullptr)
 			free((void*)last_level_buffer);

@@ -8,7 +8,9 @@ void AudioResourceSound_Load(AudioResourceSound* sound_rsc, const char* file_pat
 void AudioResourceSound_Free(AudioResourceSound* sound_rsc) {
 	UnloadSound(sound_rsc->sound);
 }
-void AudioResourceSound_ToggleOn(AudioResourceSound* sound_rsc) { PlaySound(sound_rsc->sound); }
+void AudioResourceSound_ToggleOn(AudioResourceSound* sound_rsc) { 
+	PlaySound(sound_rsc->sound);
+}
 void AudioResourceSound_ToggleOff(AudioResourceSound* sound_rsc) { /* noop */ }
 bool AudioResourceSound_Update(const AudioResourceSound* sound_rsc) { return false; }
 

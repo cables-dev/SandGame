@@ -16,10 +16,10 @@ constexpr auto PLAYER_WIDTH = 24;
 constexpr auto PLAYER_HEIGHT = 40;
 constexpr auto MIN_DISTANCE_FOR_SAND_PLACE_MODE = 100;
 constexpr auto G = 900.0;
-constexpr auto PLAYER_SAND_CAPACITY = 7500;
+constexpr auto PLAYER_SAND_CAPACITY = 75000;
 constexpr auto BARREL_EXPLOSION_DELAY_S = 0.5;
 constexpr auto DOOR_LOADING_DELAY_S = 1.5;
-constexpr auto DEFAULT_MAX_ENTITIES = 100;
+constexpr auto DEFAULT_MAX_ENTITIES = 1000;
 
 struct Entity;						
 struct Player;						
@@ -33,9 +33,9 @@ enum PlayerFireType {			// Don't change order...
 	FIRE_TYPE_MAX
 };
 
-enum PlayerDirection {
-	PLAYER_FACING_LEFT,
-	PLAYER_FACING_RIGHT
+enum EntityDirection {
+	ENTITY_FACING_LEFT,
+	ENTITY_FACING_RIGHT
 };
 
 struct Player {
@@ -45,11 +45,12 @@ struct Player {
 	bool do_jump{};
 	PlayerFireType fire_mode{};
 	int ammo{};
-	PlayerDirection direction = PLAYER_FACING_RIGHT;
+	EntityDirection direction = ENTITY_FACING_RIGHT;
 };
 
 struct SandGamePersistentState {
-	int nothing{};
+	double elapsed_s{};
+	std::uint32_t door_lock_flags{};
 };
 
 struct SandGame {
@@ -71,6 +72,8 @@ struct SandGame {
 	const char* toast = "";
 	const char* level_buffer = nullptr;		// Must be kept alive so entities can reference internal strings.
 	const char* new_level_path = nullptr;
+	bool do_time_tick = true;
+	int skip_frame = 3;								// This fixes a bug I cba to find
 };
 using SandGameForEachEntityFn_t = void(*)(Entity*);
 
@@ -87,7 +90,8 @@ void SandGame_Create(
 	std::uint32_t pit_stubbornness, 
 	std::uint16_t pit_grain_size,
 	std::uint32_t max_entities,
-	SandGamePersistentState* persistent = nullptr
+	SandGamePersistentState* persistent = nullptr,
+	bool do_timer = true 
 );
 void SandGame_Destroy(SandGame* game, SandGamePersistentState** out_persistent_state);
 void SandGame_Destroy(SandGame* game);
@@ -95,7 +99,7 @@ void SandGame_Update(SandGame* game, double dt);
 Entity* SandGame_AddEntity(SandGame* game, void* entity, EntityType type);		// "entity" will be copied into a local buffer.
 void SandGame_RemoveEntity(SandGame* game, Entity* entity);
 void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb);
-void SandGame_SetToast(SandGame* game, const char* toast);
+void SandGame_SetToast(SandGame* game, const char* toast, bool do_sound=true);
 void SandGame_SetFXFlag(SandGame* game, RenderFX fx);
 void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx, bool to=true);
 void SandGame_SetNewLevelPath(SandGame* game, const char* new_level_path);
@@ -103,6 +107,9 @@ const char* SandGame_GetNewLevelPath(const SandGame* game);						// nullptr if e
 bool SandGame_ShouldLoadNewLevel(const SandGame* game);
 void SandGame_NotifyLevelLoaded(SandGame* game);
 void SandGame_FreezeFor(SandGame* game, double s);
+double SandGame_GetElapsedSeconds(const SandGame* game);
+bool SandGame_IsLockFlagUnLocked(const SandGame* game, int lock_flag);
+void SandGame_SetUnLockFlag(const SandGame* game, int lock_flag, bool to=true);
 
 
 // ======== ENTITY CODE ======== 
@@ -148,10 +155,30 @@ struct EntityHintBox {
 	EntityVTable vtable;						// !Important 
 	AABB aabb;
 	const char* message;
-	bool triggered;
+	bool already_triggered;
 	bool only_once;
+	bool has_sound;
+	AudioResource audio_rsc;
 };
-void HintBox_Create(EntityHintBox* box, const char* message, bool only_once, double top_left_x, double top_left_y, double w, double h);
+void HintBox_Create(
+	EntityHintBox* box, 
+	const char* message, 
+	bool only_once, 
+	double top_left_x, 
+	double top_left_y, 
+	double w, 
+	double h
+);
+void HintBox_Create(
+	EntityHintBox* box,
+	const char* message,
+	bool only_once,
+	double top_left_x,
+	double top_left_y,
+	double w,
+	double h,
+	AudioResource rsc
+);
 void HintBox_Place(Entity* rect, SandGame* game);
 void HintBox_Remove(Entity* rect, SandGame* game);
 void HintBox_Think(Entity* rect, SandGame* game, double dt);
@@ -165,6 +192,7 @@ struct EntityBarrel {
 	GraphicResource active_sprite;
 	bool sprite_changed;
 	bool fuse_lit;
+	bool defused = false;
 	float time_until_explosion_s;
 };
 void Barrel_Create(
@@ -183,19 +211,54 @@ struct EntityLevelDoor {
 	EntityVTable vtable;						// !Important 
 	AABB aabb;
 	const char* next_level_path;
+	int lock_flag;
+	int unlock_flag;
 };
 void LevelDoor_Create(
 	EntityLevelDoor* door,
 	double top_left_x,
 	double top_left_y,
 	double w, double h,							// w,h should probably be fixed	
-	const char* next_level_path
+	const char* next_level_path,
+	int lock_flag = -1,
+	int unlock_flag = -1
 );
 void LevelDoor_Place(Entity* ent, SandGame* game);
 void LevelDoor_Remove(Entity* ent, SandGame* game);
 void LevelDoor_Think(Entity* ent, SandGame* game, double dt);
+bool LevelDoor_HasLock(EntityLevelDoor* door);
+bool LevelDoor_IsUnlocked(EntityLevelDoor* door, const SandGame* game);
 
-
+constexpr auto LADYBIRD_WIDTH = 15;
+constexpr auto LADYBIRD_HEIGHT = 7;
+constexpr auto LADYBIRD_MOVE_TRY_DELAY_S = 2.0;
+constexpr auto LADYBIRD_MOVE_FOR_S = 1.0;
+constexpr auto LADYBIRD_SPEED_X = 3.0;
+constexpr auto LADYBIRD_VISION_DISTANCE = 500.0;
+constexpr auto LADYBIRD_DESPAWN_DISTANCE = 2000.0;
+constexpr auto LADYBIRD_FLIGHT_SPEED = 400.0;
+enum LadybirdState {
+	LADYBIRD_IDLE,
+	LADYBIRD_MOVING,
+	LADYBIRD_SHOCKED,
+	LADYBIRD_FLIGHT
+};
+struct EntityLadybird {
+	EntityVTable vtable;						// !Important 
+	AABB aabb;
+	LadybirdState state = LADYBIRD_IDLE;
+	EntityDirection direction = ENTITY_FACING_LEFT;
+	double last_move = 9.0;
+	bool new_state = false;
+	double time_until_move = 0.0;
+	double move_to_x;
+	double move_to_y;
+};
+void Ladybird_Create(EntityLadybird* ladybird, double x, double y);
+void Ladybird_GetFeet(const EntityLadybird* ladybird, double* out_x, double* out_y);
+void Ladybird_Place(Entity* ent, SandGame* game);
+void Ladybird_Remove(Entity* ent, SandGame* game);
+void Ladybird_Think(Entity* ent, SandGame* game, double dt);
 // ======== ENTITIES ======== 
 
 
@@ -206,6 +269,7 @@ enum EntityType {
 	ENTITY_HINT_BOX,
 	ENTITY_BARREL,
 	ENTITY_LEVEL_DOOR,
+	ENTITY_LADYBIRD,
 	ENTITY_MAX
 };
 struct Entity {
@@ -216,6 +280,7 @@ struct Entity {
 		EntityHintBox hint_box;
 		EntityBarrel barrel;
 		EntityLevelDoor door;
+		EntityLadybird ladybird;
 	} entity;
 	EntityType type;
 	Entity* _next;
@@ -228,6 +293,7 @@ void Entity_Think(Entity* _this, SandGame* game, double dt);
 
 
 // ======= PLAYER ======= 
-PlayerDirection Player_GetDirection(const Player* player);
+EntityDirection Player_GetDirection(const Player* player);
 bool Player_IsMoving(const Player* player);
 bool Player_IsGoingFast(const Player* player);
+int PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, SandPitQueryResult* out_region_query = nullptr);

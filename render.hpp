@@ -6,6 +6,8 @@ constexpr auto MAX_GRAPHIC_RESOURCES = 64;
 constexpr auto RENDER_BACKGROUND_COLOR = Color{ 12, 5, 26, 255 };
 constexpr auto WEAPON_NAME_FONT_SIZE = 20;
 constexpr auto WEAPON_NAME_FONT_COLOR = Color{ 0xbf, 0xbf, 0xbf, 0xff };
+constexpr auto TIME_READOUT_FONT_SIZE = 30;
+constexpr auto TIME_READOUT_X_OFFSET = 148;
 constexpr auto FX_TOAST_DISPLAY_DURATION = 4.0;			// 4s
 constexpr auto FX_TOAST_FADE_AFTER = 3.3;
 constexpr auto FX_TOAST_FONT_SIZE = 30;
@@ -20,6 +22,14 @@ constexpr Color PARTICLE_COLOURS[]{
 	Color{234, 202, 74, 255},
 	Color{253, 221, 88, 255}
 };
+
+//constexpr Color PARTICLE_COLOURS[]{
+//	Color{245, 100, 134, 255},
+//	Color{158, 21, 21, 255},
+//	Color{184, 17, 17, 255},
+//	Color{250, 69, 69, 255}
+//};
+
 
 struct RenderCamera {
 	std::uint32_t start_x{};
@@ -67,6 +77,7 @@ struct RenderData {
 	float black_fade_in_out_duration = 0.0;
 	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES]{};
 	GraphicResource skybox;
+	char time_readout_buffer[20]{};
 };
 
 // TODO: pass global constants as arguments

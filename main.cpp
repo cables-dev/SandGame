@@ -43,7 +43,7 @@ int main()
 		&audio_data
 	);
 
-	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl0.sg");
+	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl1.sg");
 
 	// Game loop
 	while (!Render_ShouldGameClose(&render_data)) {

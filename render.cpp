@@ -284,12 +284,11 @@ void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
 	double bottom_left_y = 0;
 	WorldToScreen(bottom_left_x_w , bottom_left_y_w , &bottom_left_x, &bottom_left_y);
 
-	auto sprite_rsc = barrel->active_sprite;
+	auto sprite_rsc = (barrel->defused) ? GRAPHIC_RSC_BARREL_DEFUSED : barrel->active_sprite;
 	auto needs_reset = barrel->sprite_changed;
 	if (needs_reset)
 		Render_ResetGraphicResource(data, sprite_rsc);
 
-	// cache me
 	auto sprite_h = Render_GetGraphicResourceHeight(data, sprite_rsc);
 	Render_DrawGraphicResource(data, sprite_rsc, bottom_left_x - data->camera.start_x, bottom_left_y - sprite_h - data->camera.start_y, WHITE, dt_s);
 }
@@ -315,12 +314,41 @@ void RenderLevelDoor(RenderData* data, const EntityLevelDoor* door, float dt_s) 
 	DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);
 }
 
+GraphicResource Render_RenderLadybirdGetGraphicResource(RenderData* data, const EntityLadybird* ladybird) {
+	auto direction = ladybird->direction;
+	switch(ladybird->state) {
+		case LADYBIRD_IDLE: { return (direction == ENTITY_FACING_LEFT) ? GRAPHIC_RSC_LADYBIRD_IDLE_LEFT : GRAPHIC_RSC_LADYBIRD_IDLE_RIGHT; }
+		case LADYBIRD_MOVING: { return (direction == ENTITY_FACING_LEFT) ? GRAPHIC_RSC_LADYBIRD_WALK_LEFT : GRAPHIC_RSC_LADYBIRD_WALK_RIGHT; }
+		case LADYBIRD_SHOCKED: { return GRAPHIC_RSC_LADYBIRD_SHOCKED; }
+		case LADYBIRD_FLIGHT: { return GRAPHIC_RSC_LADYBIRD_FLIGHT; }
+	}
+}
+
+void RenderLadybird(RenderData* data, const EntityLadybird* ladybird, float dt_s) {
+	auto rsc = Render_RenderLadybirdGetGraphicResource(data, ladybird);
+	if (ladybird->new_state)
+		Render_ResetGraphicResource(data, rsc);
+
+	auto bottom_left_x_w = 0.0;
+	auto bottom_left_y_w = 0.0;
+	Ladybird_GetFeet(ladybird, &bottom_left_x_w, &bottom_left_y_w);
+
+	double bottom_left_x = 0;
+	double bottom_left_y = 0;
+	WorldToScreen(bottom_left_x_w, bottom_left_y_w, &bottom_left_x, &bottom_left_y);
+	auto sprite_w = Render_GetGraphicResourceHeight(data, rsc);
+	auto sprite_h = Render_GetGraphicResourceHeight(data, rsc);
+
+	Render_DrawGraphicResource(data, rsc, bottom_left_x - data->camera.start_x, bottom_left_y - sprite_h - data->camera.start_y, WHITE, dt_s);
+}
+
 void RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
 	switch (entity->type) {
 		case ENTITY_RECTANGLE: { RenderRectangleObstacle(renderer, &entity->entity.rect, dt_s); break; }
 		case ENTITY_HINT_BOX: { /* pass */ break; }
 		case ENTITY_BARREL: { RenderBarrel(renderer, &entity->entity.barrel, dt_s); break; }
 		case ENTITY_LEVEL_DOOR: { RenderLevelDoor(renderer, &entity->entity.door, dt_s); break; }
+		case ENTITY_LADYBIRD: { RenderLadybird(renderer, &entity->entity.ladybird, dt_s); break; }
 		default: { assert("RenderEntity: Unaccounted entity type encountered." && false); }
 	}
 }
@@ -419,9 +447,9 @@ void Render_RenderSand(const RenderData* r, const SandPit* pit) {
 
 void Render_RenderPlayer(RenderData* r, const Player* player, float dt_s) {
 	auto direction = Player_GetDirection(player);
-	auto graphic = (direction == PLAYER_FACING_LEFT) ? GRAPHIC_RSC_PLAYER_IDLE_LEFT : GRAPHIC_RSC_PLAYER_IDLE_RIGHT;
+	auto graphic = (direction == ENTITY_FACING_LEFT) ? GRAPHIC_RSC_PLAYER_IDLE_LEFT : GRAPHIC_RSC_PLAYER_IDLE_RIGHT;
 	if (Player_IsMoving(player))
-		graphic = (direction == PLAYER_FACING_LEFT) ? GRAPHIC_RSC_PLAYER_WALK_LEFT : GRAPHIC_RSC_PLAYER_WALK_RIGHT;
+		graphic = (direction == ENTITY_FACING_LEFT) ? GRAPHIC_RSC_PLAYER_WALK_LEFT : GRAPHIC_RSC_PLAYER_WALK_RIGHT;
 
 	auto start_x = r->camera.start_x;
 	auto start_y = r->camera.start_y;
@@ -576,11 +604,29 @@ void Render_RenderBlackFadeInOut(RenderData* r, float dt_s) {
 	DrawRectangle(0, 0, r->camera.w, r->camera.h, display);
 }
 
+const char* Render_GetElapsedTimeString(RenderData* r, const SandGame* game) {
+	auto elapsed_seconds = SandGame_GetElapsedSeconds(game);
+    auto minutes = (int)(SandGame_GetElapsedSeconds(game) / 60);
+    auto remaining_seconds = fmod(elapsed_seconds, 60.0);
+    auto seconds = (int)remaining_seconds;
+    auto milliseconds = (int)((remaining_seconds - seconds) * 1000);
+    snprintf(r->time_readout_buffer, sizeof(r->time_readout_buffer) - 1, "%02d:%02d.%03d", minutes, seconds, milliseconds);
+	return r->time_readout_buffer;
+}
+
+// Chuddy says hi and foenem
+void Render_RenderTimer(RenderData* r, const SandGame* game) {
+	auto* readout = Render_GetElapsedTimeString(r, game);
+	auto text_w = TIME_READOUT_X_OFFSET;
+	DrawText(readout, r->camera.w - text_w, 10, TIME_READOUT_FONT_SIZE, WHITE);
+}
+
 void Render_RenderUI(RenderData* r, const SandGame* game, float dt_s) {
 	Render_RenderPlayerWeaponType(r, game, dt_s);
 	Render_RenderPlayerWeaponAmmo(r, game, dt_s);
 	Render_RenderToast(r, game, dt_s);
 	Render_RenderWhiteFlash(r, dt_s);
+	Render_RenderTimer(r, game);
 	Render_RenderBlackFadeInOut(r, dt_s);
 	DrawFPS(20, 20);
 }

@@ -165,13 +165,17 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="levels\lvl0.sg" />
+    <None Include="levels\lvl1.sg" />
     <None Include="levels\lvl_empty.sg" />
+    <None Include="levels\lvl_inter.sg" />
+    <None Include="lvl_inter.sg" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="assets\ambience.wav" />
     <Media Include="assets\boom.wav" />
     <Media Include="assets\fuse.wav" />
     <Media Include="assets\jump.mp3" />
+    <Media Include="assets\scream.wav" />
     <Media Include="assets\toast_notif.wav" />
   </ItemGroup>
   <ItemGroup>
@@ -181,8 +185,18 @@
     <Image Include="assets\barrel_kurt_cobarrel_idle.gif" />
     <Image Include="assets\barrel_terrorist_explode.gif" />
     <Image Include="assets\barrel_terrorist_idle.gif" />
+    <Image Include="assets\dark_background.png" />
+    <Image Include="assets\ladybird_flight.gif" />
+    <Image Include="assets\ladybird_idle_left.png" />
+    <Image Include="assets\ladybird_idle_right.png" />
+    <Image Include="assets\ladybird_surprise.gif" />
+    <Image Include="assets\ladybird_walk_left.gif" />
+    <Image Include="assets\ladybird_walk_right.gif" />
     <Image Include="assets\player_idle.png" />
     <Image Include="assets\player_walking.gif" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="levels\lvl2.sg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
