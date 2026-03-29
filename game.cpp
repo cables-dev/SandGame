@@ -367,6 +367,11 @@ void SandGame_Create(SandGame* game, double player_x, double player_y, double pl
 	SandPit_Create(&game->pit, pit_w, pit_h, pit_num_screens_horizontal, pit_num_screens_vertical, pit_stubbornness, pit_grain_size);
 	SandGame_CreateEntityList(game, max_entities);
 	game->do_time_tick = do_timer;
+	game->toast = "";
+	game->fx_flags = NULL_FX_FLAGS;
+	game->sfx_flags = NULL_SFX_FLAGS;
+	game->action_flags_pressed = NULL_ACTION_FLAGS;
+	game->action_flags_held = NULL_ACTION_FLAGS;
 
 	if (persistent == nullptr) {
 		game->persistent = (SandGamePersistentState*)malloc(sizeof(SandGamePersistentState));

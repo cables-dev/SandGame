@@ -1,4 +1,4 @@
-// ConsoleApplication1.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// ConsoleApplication1.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 #include "common.hpp"
@@ -9,6 +9,19 @@
 #include "level.hpp"
 #include <cassert>
 
+
+//⠀⠀⠀⠀⠀⠀⢠⣤⣴⣶⣶⣶⣶⣶⣶⣶⣶⣦⣤⣤⣄⣀⣀⣀⡀⠀⠀⠀⠀
+//⠀⠀⠀⢠⣶⣿⣿⡿⠿⠿⠿⠛⠛⠛⠛⠛⠛⠿⠿⠿⠿⢿⣿⣿⣿⣿⡆⠀⠀
+//⠀⠀⠀⢸⣿⠟⠉⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⢸⣿⣇⠀⠀
+//⠀⠀⢠⣿⣿⠀⠀⠀⠀⠀⠀⠀⠹⣦⠀⠀⠀⠀⣰⡟⠀⠀⠀⠀⢸⣿⣿⣀⠀
+//⠀⠀⢸⣿⡿⠀⢰⣶⣤⣤⣄⣀⡀⠙⣃⠀⠀⡀⠛⠀⣀⣠⣤⣤⣬⣹⡟⢩⡿
+//⢸⣟⢻⣿⢷⣤⣴⡟⣿⣿⣿⣿⣿⣶⣋⣀⣀⣻⣿⣿⣿⣿⣿⣿⣿⢿⣧⡟⠁
+//⠀⠙⢷⣿⡀⠀⢹⣄⡙⠛⠛⠛⣿⢹⡏⠉⠙⣿⠀⠛⠻⠿⠿⢿⡇⢸⡏⠀⠀
+//⠀⠀⠀⠙⡧⠀⠀⠉⠉⠛⠛⠛⠋⢸⡇⠀⠀⣿⠛⠛⠛⠛⠛⠛⠃⢸⡇⠀⠀
+//⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⣸⡇⠀⠀⢻⠀⠀⠀⠀⠀⠀⠀⣸⠃⠀⠀
+//⠀⠀⠀⠀⣷⡀⠀⠀⠀⠀⠀⠀⣠⣿⣤⣀⣠⣾⡇⠀⠀⠀⠀⠀⠀⡟⠀⠀⠀
+//⠀⠀⠀⠀⠘⣇⠀⠀⠀⠀⣠⠀⠛⠀⠀⠉⠁⠈⠛⠰⣦⠀⠀⠀⢰⡇⠀⠀⠀
+//⠀⠀⠀⠀⠀⢿⡀⠀⠀⣾⢋⣤⡴⠞⠛⠳⠞⠛⠳⣦⣌⢷⡄⢀⡾⠁⠀⠀⠀
 void DefaultKeyBindings(KeyBindings* bindings) {
 	Input_Create(bindings);
 	Input_SetBinding(bindings, ACTION_MOVE_LEFT, KEY_A);				
@@ -20,6 +33,11 @@ void DefaultKeyBindings(KeyBindings* bindings) {
 	Input_SetBinding(bindings, ACTION_DBG_RESET, KEY_R);
 	Input_SetBinding(bindings, ACTION_INTERACT, KEY_E);
 }
+//⠀⠀⠀⠀⠀⠸⣧⠀⢀⣴⣿⡛⠛⠛⠛⠛⠛⠛⠛⣛⣿⢷⣄⣼⠇⠀⠀⠀⠀
+//⠀⠀⠀⠀⠀⠀⠙⣷⡟⠁⠈⠻⢦⣤⣤⣤⡤⠶⠟⠋⠁⣠⡿⠃⠀⠀⠀⠀⠀	- "I like games and gaming and consoles and controllers and Call of Duty and Mario.
+//⠀⠀⠀⠀⠀⠀⠀⠈⠻⣶⣄⠀⠀⠾⠟⠛⠳⠆⠀⣠⣾⠋⠀⠀⠀⠀⠀⠀⠀    I also like Sematary and Haunted Mound and Ghost Mountain. I got hungry so I am
+//⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⢷⣄⣀⣀⣀⣠⡶⠟⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀	   eating the function sorry." 
+//⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
 int main()
 {
@@ -43,7 +61,7 @@ int main()
 		&audio_data
 	);
 
-	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl1.sg");
+	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl_empty.sg");
 
 	// Game loop
 	while (!Render_ShouldGameClose(&render_data)) {

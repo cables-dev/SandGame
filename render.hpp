@@ -69,14 +69,14 @@ struct GraphicResourceOpt {
 };
 
 struct RenderData {
-	RenderCamera camera;
-	Texture2D sand_texture;
-	Color* sand_pixel_buffer;
+	RenderCamera camera{};
+	Texture2D sand_texture{};
+	Color* sand_pixel_buffer{};
 	float toast_display_duration = 0.0;
 	float white_flash_duration = 0.0;
 	float black_fade_in_out_duration = 0.0;
 	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES]{};
-	GraphicResource skybox;
+	GraphicResource skybox{};
 	char time_readout_buffer[20]{};
 };
 

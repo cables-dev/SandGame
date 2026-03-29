@@ -294,24 +294,24 @@ void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
 }
 
 void RenderLevelDoor(RenderData* data, const EntityLevelDoor* door, float dt_s) {
-	double top_left_x_w = 0;
-	double top_left_y_w = 0;
-	double bottom_right_x_w = 0;
-	double bottom_right_y_w = 0;
-	AABB_GetCornerCoords(&door->aabb, AABB_TOP_LEFT, &top_left_x_w, &top_left_y_w);
-	AABB_GetCornerCoords(&door->aabb, AABB_BOTTOM_RIGHT, &bottom_right_x_w, &bottom_right_y_w);
-
-	double top_left_x = 0;
-	double top_left_y = 0;
-	double bottom_right_x = 0;
-	double bottom_right_y = 0;
-	WorldToScreen(top_left_x_w, top_left_y_w, &top_left_x, &top_left_y);
-	WorldToScreen(bottom_right_x_w, bottom_right_y_w, &bottom_right_x, &bottom_right_y);
-
-	auto w = bottom_right_x - top_left_x;
-	auto h = bottom_right_y - top_left_y;
-	auto color = Color{ 0xff, 0xbb, 0xff, 0xff };
-	DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);
+	double top_left_x_w = 0;/*-------------------------------------------------------------------------*/
+	double top_left_y_w = 0;/*-------------------------------------------------------------------------*/
+	double bottom_right_x_w = 0;/*---------------------------------------------------------------------*/
+	double bottom_right_y_w = 0;/*---------------------------------------------------------------------*/
+	AABB_GetCornerCoords(&door->aabb, AABB_TOP_LEFT, &top_left_x_w, &top_left_y_w);/*------------------*/
+	AABB_GetCornerCoords(&door->aabb, AABB_BOTTOM_RIGHT, &bottom_right_x_w, &bottom_right_y_w);/*------*/
+	/*-------------------------------------------------------------------------------------------------*/
+	double top_left_x = 0;/*---------------------------------------------------------------------------*/
+	double top_left_y = 0;/*---------------------------------------------------------------------------*/
+	double bottom_right_x = 0;/*-------------------------------------thislooks-cool--------------------*/
+	double bottom_right_y = 0;/*-----------------------------------------------------------------------*/
+	WorldToScreen(top_left_x_w, top_left_y_w, &top_left_x, &top_left_y);/*-----------------------------*/
+	WorldToScreen(bottom_right_x_w, bottom_right_y_w, &bottom_right_x, &bottom_right_y);/*-------------*/
+	/*-------------------------------------------------------------------------------------------------*/
+	auto w = bottom_right_x - top_left_x;/*------------------------------------------------------------*/
+	auto h = bottom_right_y - top_left_y;/*------------------------------------------------------------*/
+	auto color = Color{ 0xff, 0xbb, 0xff, 0xff };/*----------------------------------------------------*/
+	DrawRectangle(top_left_x - data->camera.start_x, top_left_y - data->camera.start_y, w, h, color);/**/
 }
 
 GraphicResource Render_RenderLadybirdGetGraphicResource(RenderData* data, const EntityLadybird* ladybird) {

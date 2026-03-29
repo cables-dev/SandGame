@@ -58,12 +58,12 @@ struct SandGame {
 	RenderFXFlags fx_flags = NULL_FX_FLAGS;
 	SoundFXFlags sfx_flags = NULL_SFX_FLAGS;
 	GameActionFlags action_flags_pressed = NULL_ACTION_FLAGS;
-	GameActionFlags action_flags_held = NULL_ACTION_FLAGS;;
+	GameActionFlags action_flags_held = NULL_ACTION_FLAGS;
 	double frozen_for_s = 0.0;
-	int cursor_x;
-	int cursor_y;
-	Player player;
-	SandPit pit;
+	int cursor_x{};
+	int cursor_y{};
+	Player player{};
+	SandPit pit{};
 	Entity* entities = nullptr;						// TODO: make static array with compile-time size
 	Entity* entities_head = nullptr;
 	Entity* entities_top = nullptr;					// Knuth-style fixed-width free-store
@@ -125,10 +125,10 @@ struct EntityVTable {						// Each new entity must have this as their first memb
 // ======== ENTITIES ======== 
 struct EntityRectangleObstacle {
 	EntityVTable vtable;						// !Important 
-	AABB aabb;
-	GameColour colour;
-	bool has_graphic;
-	GraphicResource graphic;
+	AABB aabb{};
+	GameColour colour{};
+	bool has_graphic{};
+	GraphicResource graphic{};
 };
 void RectangleObstacle_Create(
 	EntityRectangleObstacle* rect, 
@@ -153,12 +153,12 @@ void RectangleObstacle_Think(Entity* rect, SandGame* game, double dt);
 
 struct EntityHintBox {
 	EntityVTable vtable;						// !Important 
-	AABB aabb;
-	const char* message;
-	bool already_triggered;
-	bool only_once;
-	bool has_sound;
-	AudioResource audio_rsc;
+	AABB aabb{};
+	const char* message{};
+	bool already_triggered{};
+	bool only_once{};
+	bool has_sound{};
+	AudioResource audio_rsc{};
 };
 void HintBox_Create(
 	EntityHintBox* box, 
@@ -185,15 +185,15 @@ void HintBox_Think(Entity* rect, SandGame* game, double dt);
 
 struct EntityBarrel {
 	EntityVTable vtable;						// !Important 
-	AABB aabb;
-	AABB sight_aabb;
-	GraphicResource idle_sprite;
-	GraphicResource explode_sprite;
-	GraphicResource active_sprite;
-	bool sprite_changed;
-	bool fuse_lit;
+	AABB aabb{};
+	AABB sight_aabb{};
+	GraphicResource idle_sprite{-1};
+	GraphicResource explode_sprite{-1};
+	GraphicResource active_sprite{-1};
+	bool sprite_changed{};
+	bool fuse_lit{};
 	bool defused = false;
-	float time_until_explosion_s;
+	float time_until_explosion_s{};
 };
 void Barrel_Create(
 	EntityBarrel* box, 
@@ -209,10 +209,10 @@ void Barrel_Think(Entity* rect, SandGame* game, double dt);
 
 struct EntityLevelDoor {
 	EntityVTable vtable;						// !Important 
-	AABB aabb;
-	const char* next_level_path;
-	int lock_flag;
-	int unlock_flag;
+	AABB aabb{};
+	const char* next_level_path{};
+	int lock_flag{};
+	int unlock_flag{};
 };
 void LevelDoor_Create(
 	EntityLevelDoor* door,
@@ -245,14 +245,14 @@ enum LadybirdState {
 };
 struct EntityLadybird {
 	EntityVTable vtable;						// !Important 
-	AABB aabb;
+	AABB aabb{};
 	LadybirdState state = LADYBIRD_IDLE;
 	EntityDirection direction = ENTITY_FACING_LEFT;
 	double last_move = 9.0;
 	bool new_state = false;
 	double time_until_move = 0.0;
-	double move_to_x;
-	double move_to_y;
+	double move_to_x{};
+	double move_to_y{};
 };
 void Ladybird_Create(EntityLadybird* ladybird, double x, double y);
 void Ladybird_GetFeet(const EntityLadybird* ladybird, double* out_x, double* out_y);
@@ -264,7 +264,7 @@ void Ladybird_Think(Entity* ent, SandGame* game, double dt);
 
 
 // For external code (i.e the renderer)
-enum EntityType {
+enum EntityType : std::uint32_t {
 	ENTITY_RECTANGLE,
 	ENTITY_HINT_BOX,
 	ENTITY_BARREL,
@@ -283,8 +283,8 @@ struct Entity {
 		EntityLadybird ladybird;
 	} entity;
 	EntityType type;
-	Entity* _next;
-	Entity* _prev;
+	Entity* _next{};
+	Entity* _prev{};
 };
 Entity Entity_CreateFrom(void* instance, EntityType type);		
 void Entity_Place(Entity* _this, SandGame* game);
