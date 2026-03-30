@@ -13,7 +13,7 @@ int PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, 
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
-				if (SandPit_PlaceGrain(p, x + i_x, y + i_y, rand() % 4))
+				if (SandPit_PlaceGrain(p, x + i_x, y + i_y, PseudoRandom_GetU32() & 0b11));
 					++num_placed;
 			}
 		}

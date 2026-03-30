@@ -562,15 +562,12 @@ bool Level_HandleSandDefinition(SandGame* game, SandGameLevelFile* level) {
     success = SandGameLevelFile_ReadUnsignedInteger(level, &top_left_y);
     if (!success) return false;
 
-	std::uint32_t w;
-    success = SandGameLevelFile_ReadUnsignedInteger(level, &w);
+	std::uint32_t r;
+    success = SandGameLevelFile_ReadUnsignedInteger(level, &r);
     if (!success) return false;
 
-	std::uint32_t h;
-    success = SandGameLevelFile_ReadUnsignedInteger(level, &h);
-    if (!success) return false;
-
-    (game, top_left_x, top_left_y, w, h);
+    PlaceSandCircle(&game->pit, top_left_x/game->pit.grain_size, top_left_y/game->pit.grain_size, r/game->pit.grain_size, nullptr);
+    return true;
 }
 
 bool Level_ProcessCommand(

@@ -1,4 +1,4 @@
-level 100.0 580.0 6 1 4 1
+level 0 1050.0 8 1 4 1
 sound 0 "assets\toast_notif.wav"
 sound 1 "assets\jump.wav"
 sound 2 "assets\boom.wav"
@@ -24,22 +24,41 @@ graphic 14 "assets\ladybird_idle_right.png"
 graphic 15 "assets\ladybird_walk_left.gif" 0.1
 graphic 16 "assets\ladybird_walk_right.gif" 0.1
 graphic 17 "assets\ladybird_surprise.gif" 0.1
-graphic 18 "assets\ladybird_flight.gif" 0.02
+graphic 18 "assets\ladybird_flight.gif" 0.1
 ent 0 0 57 1920 57 255 255 255 255 11
 ent 0 1920 57 1920 57 255 255 255 255 11
 ent 0 3840 57 1920 57 255 255 255 255 11
 ent 0 5760 57 1920 57 255 255 255 255 11
 ent 0 7680 57 1920 57 255 255 255 255 11
 ent 0 9600 57 1920 57 255 255 255 255 11
-ent 1 100 1080 100 1080 "A, D to move. Hold SPACE to jump." 0 -1
-ent 1 2030 1080 50 1080 "W or MOUSE 1 to fire." 0 -1
-ent 0 3456 200 40 220 128 23 72 255 -1
-ent 1 3950 1080 50 1080 "LCTRL to change fire mode. " 0 -1
-ent 0 5376 600 40 620 128 23 72 255 -1
-ent 1 5870 1080 50 1080 "Vacuum to refill your ammo." 0 -1
-ent 1 7790 1080 50 1080 "Watch out! Smother him before he explodes." 0 -1
-ent 2 8390 57 80.0 100 0 1
-ent 1 9710 1080 50 1080 "E to interact." 0 -1
-ent 3 10400 157 50 100 "levels\lvl_inter.sg" -1 0
-ent 4 2720 57
-ent 4 6420 57
+ent 0 11520 57 1920 57 255 255 255 255 11
+ent 0 320 657 40 100 255 255 255 255 -1
+ent 0 320 557 40 100 110 130 132 100 -1
+ent 0 320 457 40 300 255 255 255 255 -1
+ent 0 320 697 1320 40 255 255 255 255 -1
+ent 0 360 377 820 40 255 255 255 255 -1
+ent 0 1600 657 40 100 255 255 255 255 -1
+ent 0 1600 457 40 400 255 255 255 255 -1
+ent 4 2420 57
+ent 4 2620 57
+ent 4 3020 57
+ent 4 2920 57
+ent 4 2520 57
+ent 4 2580 57
+ent 0 4580 1080 40 980 255 255 255 255 -1
+ent 0 4620 140 280 40 255 255 255 255 -1
+ent 0 4760 240 280 40 255 255 255 255 -1
+ent 0 4620 340 280 40 255 255 255 255 -1
+ent 0 4760 440 280 40 255 255 255 255 -1
+ent 0 4620 540 280 40 255 255 255 255 -1
+ent 0 4760 640 280 40 255 255 255 255 -1
+ent 0 4620 740 280 40 255 255 255 255 -1
+ent 0 4760 840 280 40 255 255 255 255 -1
+ent 0 5020 840 40 840 255 255 255 255 -1
+ent 4 6400 57
+ent 4 6800 57
+ent 4 6900 57
+ent 4 7000 57
+ent 0 6600 107 50 50 255 255 255 255 -1
+ent 2 6700 57 80.0 100 2 3
+sand 8400 300 300

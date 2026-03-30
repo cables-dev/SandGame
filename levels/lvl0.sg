@@ -1,4 +1,4 @@
-level 300.0 150.0 4 1 4
+level 100.0 350.0 6 1 4 1
 sound 0 "assets\toast_notif.wav"
 sound 1 "assets\jump.wav"
 sound 2 "assets\boom.wav"
@@ -17,7 +17,15 @@ graphic 7 "assets\player_walking_left.gif" 0.07
 graphic 8 "assets\player_walking.gif" 0.07
 graphic 9 "assets\player_idle_left.png"
 graphic 10 "assets\player_idle.png"
+graphic 11 "assets\grass.png"
+graphic 12 "assets\barrel_defused.gif" 0.4
+graphic 13 "assets\ladybird_idle_left.png"
+graphic 14 "assets\ladybird_idle_right.png"
+graphic 15 "assets\ladybird_walk_left.gif" 0.1
+graphic 16 "assets\ladybird_walk_right.gif" 0.1
+graphic 17 "assets\ladybird_surprise.gif" 0.1
+graphic 18 "assets\ladybird_flight.gif" 0.02
 ent 0 360 360 60 60 255 255 0 255 -1
-ent 1 350 50 50 50 "Watch out! Smother him before he explodes." 0
+ent 1 350 50 50 50 "Watch out! Smother him before he explodes." 0 -1
 ent 2 750.0 0.0 80.0 100.0 4 5
 ent 3 1200.0 100.0 50.0 100.0 "levels\lvl_empty.sg"

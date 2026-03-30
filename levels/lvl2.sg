@@ -1,4 +1,4 @@
-level 100.0 580.0 6 1 4 1
+level 100.0 50.0 6 1 2 1
 sound 0 "assets\toast_notif.wav"
 sound 1 "assets\jump.wav"
 sound 2 "assets\boom.wav"
@@ -6,13 +6,14 @@ sound 3 "assets\fuse.wav"
 sound 4 "assets\door_open.wav"
 soundstream 5 "assets\ambience.wav"
 soundstream 6 "assets\wind.wav"
+sound 7 "assets\scream.wav"
 graphic 0 "assets\barrel_cigarette_idle.gif" 0.1
 graphic 1 "assets\barrel_cigarette_explode.png"
 graphic 2 "assets\barrel_kurt_cobarrel_idle.gif" 0.05
 graphic 3 "assets\barrel_kurt_cobarrel_explode.png"
 graphic 4 "assets\barrel_terrorist_idle.gif" 0.05
 graphic 5 "assets\barrel_terrorist_explode.gif" 0.01
-graphic 6 "assets\background.png"
+graphic 6 "assets\dark_background.png"
 graphic 7 "assets\player_walking_left.gif" 0.07
 graphic 8 "assets\player_walking.gif" 0.07
 graphic 9 "assets\player_idle_left.png"
@@ -25,21 +26,4 @@ graphic 15 "assets\ladybird_walk_left.gif" 0.1
 graphic 16 "assets\ladybird_walk_right.gif" 0.1
 graphic 17 "assets\ladybird_surprise.gif" 0.1
 graphic 18 "assets\ladybird_flight.gif" 0.02
-ent 0 0 57 1920 57 255 255 255 255 11
-ent 0 1920 57 1920 57 255 255 255 255 11
-ent 0 3840 57 1920 57 255 255 255 255 11
-ent 0 5760 57 1920 57 255 255 255 255 11
-ent 0 7680 57 1920 57 255 255 255 255 11
-ent 0 9600 57 1920 57 255 255 255 255 11
-ent 1 100 1080 100 1080 "A, D to move. Hold SPACE to jump." 0 -1
-ent 1 2030 1080 50 1080 "W or MOUSE 1 to fire." 0 -1
-ent 0 3456 200 40 220 128 23 72 255 -1
-ent 1 3950 1080 50 1080 "LCTRL to change fire mode. " 0 -1
-ent 0 5376 600 40 620 128 23 72 255 -1
-ent 1 5870 1080 50 1080 "Vacuum to refill your ammo." 0 -1
-ent 1 7790 1080 50 1080 "Watch out! Smother him before he explodes." 0 -1
-ent 2 8390 57 80.0 100 0 1
-ent 1 9710 1080 50 1080 "E to interact." 0 -1
-ent 3 10400 157 50 100 "levels\lvl_inter.sg" -1 0
-ent 4 2720 57
-ent 4 6420 57
+ent 1 100 1080 100 1080 "A, D to move. Hold SPACE to jump." 0 7
