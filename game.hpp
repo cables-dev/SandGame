@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/engine.hpp"
 #include "common.hpp"
 #include "sand_sim.hpp"
 
@@ -95,13 +96,13 @@ void SandGame_Create(
 );
 void SandGame_Destroy(SandGame* game, SandGamePersistentState** out_persistent_state);
 void SandGame_Destroy(SandGame* game);
-void SandGame_Update(SandGame* game, double dt);
+void SandGame_Update(SandGame* game, EngineTime dt);
 Entity* SandGame_AddEntity(SandGame* game, void* entity, EntityType type);		// "entity" will be copied into a local buffer.
 void SandGame_RemoveEntity(SandGame* game, Entity* entity);
 void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb);
 void SandGame_SetToast(SandGame* game, const char* toast, bool do_sound=true);
-void SandGame_SetFXFlag(SandGame* game, RenderFX fx);
-void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx, bool to=true);
+void SandGame_SetFXFlag(SandGame* game, RenderFXFlag fx);
+void SandGame_SetSFXFlag(SandGame* game, SoundFXFlag sfx, bool to=true);
 void SandGame_SetNewLevelPath(SandGame* game, const char* new_level_path);
 const char* SandGame_GetNewLevelPath(const SandGame* game);						// nullptr if empty
 bool SandGame_ShouldLoadNewLevel(const SandGame* game);

@@ -447,7 +447,8 @@ void SandGame_HandleTimeElapse(SandGame* game, double dt_s) {
 		game->persistent->elapsed_s += dt_s;
 }
 
-void SandGame_Update(SandGame* game, double dt) {
+void SandGame_Update(SandGame* game, EngineTime dt) {
+	auto dt_s = dt.seconds;
 	std::uint32_t sector_x;
 	std::uint32_t sector_y;
 	double player_x_sand = 0;
@@ -456,8 +457,8 @@ void SandGame_Update(SandGame* game, double dt) {
 	double player_y = 0;
 
 	auto first_frame = SandGame_NewUpdate(game);
-	SandGame_HandleFreeze(game, dt);
-	SandGame_HandleTimeElapse(game, dt);
+	SandGame_HandleFreeze(game, dt_s);
+	SandGame_HandleTimeElapse(game, dt_s);
 
 	if (SandGame_IsFrozen(game) || first_frame)
 		return;
@@ -495,9 +496,9 @@ void SandGame_Update(SandGame* game, double dt) {
 		GameActionFlags_Get(game->action_flags_pressed, ACTION_SWITCH_FIRE_MODE),
 		mouse_x,
 		WINDOW_HEIGHT - mouse_y,
-		dt
+		dt_s
 	);
-	SandGame_ThinkEntities(game, dt);
+	SandGame_ThinkEntities(game, dt_s);
 }
 
 Entity* SandGame_AddEntity(SandGame* game, void* entity, EntityType type) {
@@ -527,7 +528,7 @@ void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb) 
 	}
 }
 
-void SandGame_SetSFXFlag(SandGame* game, SoundFX sfx, bool to) {
+void SandGame_SetSFXFlag(SandGame* game, SoundFXFlag sfx, bool to) {
 	SoundFXFlags_Set(&game->sfx_flags, sfx, to);
 }
 
@@ -573,7 +574,7 @@ void SandGame_SetUnLockFlag(const SandGame* game, int lock_flag, bool to) {
 		game->persistent->door_lock_flags &= ~(1 << lock_flag);
 }
 
-void SandGame_SetFXFlag(SandGame* game, RenderFX fx) {
+void SandGame_SetFXFlag(SandGame* game, RenderFXFlag fx) {
 	RenderFXFlags_Set(&game->fx_flags, fx);
 }
 
@@ -659,7 +660,7 @@ void HintBox_OnTrigger(EntityHintBox* box, SandGame* game) {
 	box->already_triggered = true;
 	auto has_audio = HintBox_HasAudio(box);
 	if (has_audio)
-		SandGame_SetSFXFlag(game, SoundFX_FromResource(box->audio_rsc));
+		SandGame_SetSFXFlag(game, SoundFXFlag_FromResource(box->audio_rsc));
 	SandGame_SetToast(game, box->message, !has_audio);
 }
 

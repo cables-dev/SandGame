@@ -206,7 +206,7 @@ bool SandGameLevelFile_ReadDouble(SandGameLevelFile* file, double* out_num) {
     return true;
 }
 
-bool Level_HandleSoundDefinition(AudioData* audio, SandGameLevelFile* level) {
+bool Level_HandleSoundDefinition(EngineAudioData* audio, SandGameLevelFile* level) {
     // [AUDIO_RSC] [FILE_PATH]
     AudioResource rsc{};
     auto rsc_result = SandGameLevelFile_ReadInteger(level, (long*)&rsc);
@@ -218,11 +218,11 @@ bool Level_HandleSoundDefinition(AudioData* audio, SandGameLevelFile* level) {
     if (!file_path_result)
         return false;
 
-	Audio_LoadAndSetSoundResource(audio, rsc, file_path);
+	EngineAudio_LoadAndSetSoundResource(audio, rsc, file_path);
     return true;
 }
 
-bool Level_HandleStreamDefinition(AudioData* audio, SandGameLevelFile* level) {
+bool Level_HandleStreamDefinition(EngineAudioData* audio, SandGameLevelFile* level) {
     // [AUDIO_RSC] [FILE_PATH]
     AudioResource rsc{};
     auto rsc_result = SandGameLevelFile_ReadInteger(level, (long*)&rsc);
@@ -234,7 +234,7 @@ bool Level_HandleStreamDefinition(AudioData* audio, SandGameLevelFile* level) {
     if (!file_path_result)
         return false;
 
-	Audio_LoadAndSetStreamResource(audio, rsc, file_path);
+	EngineAudio_LoadAndSetStreamResource(audio, rsc, file_path);
     return true;
 }
 
@@ -519,7 +519,7 @@ bool Level_HandleGraphicDefinition(RenderData* data, SandGameLevelFile* level) {
         return false;
 
     if (Level_IsImageFileExtension(file_extension)) {
-        Render_LoadAndSetImageResource(data, rsc, file_path);
+        EngineRender_LoadAndSetImageResource(&data->engine, rsc, file_path);
     }
     else if (Level_IsAnimationFileExtension(file_extension)) {
         double refresh_period_s;
@@ -527,7 +527,7 @@ bool Level_HandleGraphicDefinition(RenderData* data, SandGameLevelFile* level) {
         if (!period_success)
             return false;
 
-        Render_LoadAndSetAnimationResource(data, rsc, refresh_period_s, file_path);
+        EngineRender_LoadAndSetAnimationResource(&data->engine, rsc, refresh_period_s, file_path);
     }
         
     return true;
@@ -571,7 +571,7 @@ bool Level_HandleSandDefinition(SandGame* game, SandGameLevelFile* level) {
 }
 
 bool Level_ProcessCommand(
-    AudioData* audio, RenderData* render, SandGame* game, SandGameLevelFile* level, const char* command
+    EngineAudioData* audio, RenderData* render, SandGame* game, SandGameLevelFile* level, const char* command
 ) {
     if (strcmp(command, SOUND_DEFINITION_COMMAND) == 0) {
         return Level_HandleSoundDefinition(audio, level);
@@ -594,7 +594,7 @@ bool Level_ProcessCommand(
     }
 }
 
-bool Level_ProcessFile(AudioData* audio, RenderData* render, SandGame* game, SandGameLevelFile* level) {
+bool Level_ProcessFile(EngineAudioData* audio, RenderData* render, SandGame* game, SandGameLevelFile* level) {
     while (!SandGameLevelFile_IsHalted(level)) {
         volatile auto* buffer_before = level->buffer;
         volatile auto size_before = level->buffer_size;
@@ -648,7 +648,7 @@ bool Level_ProcessFileHeader(SandGameLevelFile* level, double* out_player_x, dou
     return !SandGameLevelFile_IsHalted(level);
 }
 
-bool Level_LoadFromFile(AudioData* audio, RenderData* render, SandGame* game, const char* file_path) {
+bool Level_LoadFromFile(EngineAudioData* audio, RenderData* render, SandGame* game, const char* file_path) {
     auto* last_level_buffer = game->level_buffer;
 
     // Reset state
