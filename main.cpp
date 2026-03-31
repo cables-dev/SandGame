@@ -9,7 +9,6 @@
 #include "level.hpp"
 #include <cassert>
 
-
 //⠀⠀⠀⠀⠀⠀⢠⣤⣴⣶⣶⣶⣶⣶⣶⣶⣶⣦⣤⣤⣄⣀⣀⣀⡀⠀⠀⠀⠀
 //⠀⠀⠀⢠⣶⣿⣿⡿⠿⠿⠿⠛⠛⠛⠛⠛⠛⠿⠿⠿⠿⢿⣿⣿⣿⣿⡆⠀⠀
 //⠀⠀⠀⢸⣿⠟⠉⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⢸⣿⣇⠀⠀
@@ -61,7 +60,12 @@ int main()
 		&audio_data
 	);
 
-	Level_LoadFromFile(&audio_data, &render_data, &game, "levels\\lvl_empty.sg");
+	Level_LoadFromFile(
+		&audio_data, 
+		&render_data, 
+		&game, 
+		"levels\\lvl_empty.sg"
+	);
 
 	// Game loop
 	while (!Render_ShouldGameClose(&render_data)) {

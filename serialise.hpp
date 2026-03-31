@@ -19,7 +19,6 @@
 //⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
 
-#include "common.hpp"
-#include "game.hpp"
+#include "serial.hpp"
 
-bool Serialise_SerialiseGame(const SandGame* game, char* out_buffer, std::uint32_t buffer_size);
+bool Serialise_SerialiseGame(const SandGame* game, NEEDS_FREE const char** out_buffer, std::uint32_t* out_buffer_size);

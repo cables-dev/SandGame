@@ -1,7 +1,9 @@
 #pragma once
-#include "engine/engine_common.hpp"
+#include "engine/engine.hpp"
 #include "resource.hpp"
 #include <cstdint>
+
+#define NEEDS_FREE
 
 constexpr std::uint32_t LOWEST_Y_COORDINATE{ 0 };
 constexpr std::uint32_t WINDOW_WIDTH{ 1920 };
@@ -10,7 +12,7 @@ constexpr std::uint32_t SAND_STUBBORNNESS{ 4 };
 constexpr std::uint32_t NUM_SCREENS_HORIZONTAL{ 4 };
 constexpr auto NUM_SCREENS_VERTICAL{ 1 };
 
-enum GameActionDefs {
+enum GameActionDefs : GameAction {
 	ACTION_MOVE_LEFT = 1 << 0,
 	ACTION_MOVE_RIGHT = 1 << 1,
 	ACTION_JUMP = 1 << 2,

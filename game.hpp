@@ -111,6 +111,7 @@ void SandGame_FreezeFor(SandGame* game, double s);
 double SandGame_GetElapsedSeconds(const SandGame* game);
 bool SandGame_IsLockFlagUnLocked(const SandGame* game, int lock_flag);
 void SandGame_SetUnLockFlag(const SandGame* game, int lock_flag, bool to=true);
+int SandGame_GetNumEntities(const SandGame* game);
 
 
 // ======== ENTITY CODE ======== 

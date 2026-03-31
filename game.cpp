@@ -574,6 +574,16 @@ void SandGame_SetUnLockFlag(const SandGame* game, int lock_flag, bool to) {
 		game->persistent->door_lock_flags &= ~(1 << lock_flag);
 }
 
+int SandGame_GetNumEntities(const SandGame* game) {
+	static int i;
+	i = 0;
+	auto cb = [](Entity* e) {
+		i++;
+		};
+	SandGame_ForEachEntity(game, cb);
+	return i;
+}
+
 void SandGame_SetFXFlag(SandGame* game, RenderFXFlag fx) {
 	RenderFXFlags_Set(&game->fx_flags, fx);
 }

@@ -145,6 +145,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="common.cpp" />
+    <ClCompile Include="deserialise.cpp" />
     <ClCompile Include="engine\engine_audio.cpp" />
     <ClCompile Include="engine\engine_common.cpp" />
     <ClCompile Include="engine\engine_render.cpp" />
@@ -154,10 +155,12 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="render.cpp" />
     <ClCompile Include="sand_sim.cpp" />
+    <ClCompile Include="serial.cpp" />
     <ClCompile Include="serialise.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.hpp" />
+    <ClInclude Include="deserialise.hpp" />
     <ClInclude Include="engine\engine.hpp" />
     <ClInclude Include="engine\engine_audio.hpp" />
     <ClInclude Include="engine\engine_common.hpp" />
@@ -168,6 +171,7 @@
     <ClInclude Include="render.hpp" />
     <ClInclude Include="resource.hpp" />
     <ClInclude Include="sand_sim.hpp" />
+    <ClInclude Include="serial.hpp" />
     <ClInclude Include="serialise.hpp" />
   </ItemGroup>
   <ItemGroup>

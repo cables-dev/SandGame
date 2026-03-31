@@ -4,6 +4,27 @@
 #include <iostream>
 #include <utility>
 
+constexpr auto RENDER_BACKGROUND_COLOR = Color{ 12, 5, 26, 255 };
+constexpr auto WEAPON_NAME_FONT_SIZE = 20;
+constexpr auto WEAPON_NAME_FONT_COLOR = Color{ 0xbf, 0xbf, 0xbf, 0xff };
+constexpr auto WHITE_COLOUR = GameColour{ 0xffffffff };
+constexpr auto TIMER_READOUT_FONT_COLOUR = WHITE_COLOUR;
+constexpr auto TIME_READOUT_FONT_SIZE = 30;
+constexpr auto TIME_READOUT_X_OFFSET = 148;
+
+constexpr Color PARTICLE_COLOURS[]{
+	Color{243, 227, 124, 255},
+	Color{232, 225, 74, 255},
+	Color{234, 202, 74, 255},
+	Color{253, 221, 88, 255}
+};
+
+//constexpr Color PARTICLE_COLOURS[]{
+//	Color{245, 100, 134, 255},
+//	Color{158, 21, 21, 255},
+//	Color{184, 17, 17, 255},
+//	Color{250, 69, 69, 255}
+//};
 void WorldToScreen(double x, double y, double* out_x, double* out_y) {
 	*out_x = x;
 	*out_y = WINDOW_HEIGHT - y;
@@ -318,6 +339,6 @@ void Render_RenderGame(RenderData* r, SandGame* game, EngineTime dt) {
 }
 
 bool Render_ShouldGameClose(const RenderData* data) {
-	return WindowShouldClose();
+	return EngineRender_ShouldGameClose(&data->engine);
 }
 
