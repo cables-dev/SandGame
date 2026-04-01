@@ -520,7 +520,7 @@ void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb) 
 	if (!game->entities_head)
 		return;
 
-	auto* ent = game->entities_head;
+	auto* ent = game->entities_head;			// Skip placeholder entity head
 	ent = ent->_next;
 	while (ent != game->entities_head) {
 		cb(ent);
@@ -607,7 +607,7 @@ void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, 
 
 void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, double w, double h, const GameColour colour, GraphicResource graphic) {
 	RectangleObstacle_Create(rect, top_left_x, top_left_y, w, h, colour);
-	rect->has_graphic = true;
+	rect->has_graphic = graphic >= 0;
 	rect->graphic = graphic;
 }
 

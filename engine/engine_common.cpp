@@ -8,18 +8,18 @@ constexpr auto MILLISECONDS_IN_SECONDS = 1000.0;
 
 void EngineTime_Readout(const EngineTime* time, int* out_hours, int* out_minutes, int* out_seconds, int* out_milliseconds) {
 	auto raw_seconds = time->seconds;
-	auto minutes_plus_seconds = (int)(fmod(raw_seconds, SECONDS_IN_HOURS));
+	auto remaining_minutes_plus_seconds = (int)(fmod(raw_seconds, SECONDS_IN_HOURS));
 	auto remaining_seconds = (int)(fmod(raw_seconds, SECONDS_IN_MINUTES));
 	if (out_hours)
 		*out_hours = (int)(time->seconds / SECONDS_IN_HOURS);
 	if (out_minutes) {
-		*out_minutes = remaining_seconds;
+		*out_minutes = remaining_minutes_plus_seconds - remaining_seconds;
 	}
 	if (out_seconds) {
 		*out_seconds = remaining_seconds;
 	} 
 	if (out_milliseconds) {
-		*out_milliseconds = floor(raw_seconds) * static_cast<int>(MILLISECONDS_IN_SECONDS);
+		*out_milliseconds = (raw_seconds - floor(raw_seconds)) * MILLISECONDS_IN_SECONDS;
 	}
 }
 

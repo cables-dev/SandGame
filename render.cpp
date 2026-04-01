@@ -114,7 +114,7 @@ void RenderLadybird(RenderData* data, const EntityLadybird* ladybird, float dt_s
 	double bottom_left_x = 0;
 	double bottom_left_y = 0;
 	WorldToScreen(bottom_left_x_w, bottom_left_y_w, &bottom_left_x, &bottom_left_y);
-	auto sprite_w = EngineRender_GetGraphicResourceHeight(&data->engine, rsc);
+	auto sprite_w = EngineRender_GetGraphicResourceWidth(&data->engine, rsc);
 	auto sprite_h = EngineRender_GetGraphicResourceHeight(&data->engine, rsc);
 
 	EngineRender_DrawGraphicResource(&data->engine, rsc, bottom_left_x, bottom_left_y - sprite_h, &WHITE_COLOUR, dt_s);
@@ -148,11 +148,6 @@ void InitSandTexture(RenderData* renderer) {
 	memset(renderer->sand_pixel_buffer, 0, PIT_SECTOR_WIDTH * PIT_SECTOR_HEIGHT * sizeof(Color));
 	renderer->sand_texture = LoadTextureFromImage(img);
 	UnloadImage(img);
-}
-
-void Render_InitWindow(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, const char* window_name) {
-	InitWindow(window_w, window_h, window_name);
-	ToggleBorderlessWindowed();
 }
 
 void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name, GraphicResource skybox) {

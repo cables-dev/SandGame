@@ -71,7 +71,7 @@ struct SandGame {
 	Entity* entities_avail = nullptr;
 	std::uint32_t max_entities;
 	const char* toast = "";
-	const char* level_buffer = nullptr;		// Must be kept alive so entities can reference internal strings.
+	NEEDS_FREE const char* level_buffer = nullptr;  // The currently loaded level file. Must be kept alive so entities can reference internal strings like string toast messages. 
 	const char* new_level_path = nullptr;
 	bool do_time_tick = true;
 	int skip_frame = 3;								// This fixes a bug I cba to find

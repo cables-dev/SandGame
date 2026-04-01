@@ -24,3 +24,43 @@ enum GameActionDefs : GameAction {
 	ACTION_MAX = 1 << 8// Remeber to update me!
 };
 
+struct StringChomper {
+    char* ptr;
+};
+
+void StringChomper_Create(StringChomper* chomper, char* buffer);
+char* StringChomper_GetPointer(StringChomper* chomper);
+void StringChomper_InsertTerminator(StringChomper* chomper);
+void StringChomper_Step(StringChomper* chomp);
+char StringChomper_Peek(const StringChomper* chomp);
+void StringChomper_SkipWhitespace(StringChomper* chomp);
+bool StringChomper_ReadStringLiteral(
+    StringChomper* chomp,
+    char** out_ptr,
+    std::uint32_t* out_literal_size
+);
+void StringChomper_ReadString(
+	StringChomper* chomp,
+	char** out_ptr,
+	std::uint32_t* out_string_size
+);
+bool StringChomper_ReadInteger(
+	StringChomper* chomp,
+	int* out_num
+);
+bool StringChomper_ReadUnsignedInteger(
+	StringChomper* chomp,
+	std::uint32_t* out_num
+);
+bool StringChomper_ReadBoolean(
+	StringChomper* chomp,
+	bool* out_b
+);
+bool StringChomper_ReadColour(
+	StringChomper* chomp,
+	GameColour* out_colour
+);
+bool StringChomper_ReadDouble(
+	StringChomper* chomp,
+	double* out_num
+);

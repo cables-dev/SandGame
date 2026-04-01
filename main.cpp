@@ -7,6 +7,8 @@
 #include "game.hpp"
 #include "render.hpp"
 #include "level.hpp"
+#include "serialise.hpp"
+#include "deserialise.hpp"
 #include <cassert>
 
 //⠀⠀⠀⠀⠀⠀⢠⣤⣴⣶⣶⣶⣶⣶⣶⣶⣶⣦⣤⣤⣄⣀⣀⣀⡀⠀⠀⠀⠀
@@ -88,3 +90,9 @@ int main()
 	return 0;
 }
 
+//char* buff;
+//std::uint32_t sizeof_buff;
+//Serialise_SerialiseGame(&game, &buff, &sizeof_buff);
+//DeserialiseMetadata md;
+//DeserialiseError err;
+//Level_DeserialiseFile(&audio_data, &render_data, &game, &md, "levels\\lvl_empty.sg", &err);
