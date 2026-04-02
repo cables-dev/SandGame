@@ -1,0 +1,46 @@
+level 637.863196 97.000000 6 1 4 1
+graphic 0 "assets\barrel_cigarette_idle.gif" 0.100000
+graphic 1 "assets\barrel_cigarette_explode.png"
+graphic 2 "assets\barrel_kurt_cobarrel_idle.gif" 0.050000
+graphic 3 "assets\barrel_kurt_cobarrel_explode.png"
+graphic 4 "assets\barrel_terrorist_idle.gif" 0.050000
+graphic 5 "assets\barrel_terrorist_explode.gif" 0.010000
+graphic 6 "assets\background.png"
+graphic 7 "assets\player_walking_left.gif" 0.070000
+graphic 8 "assets\player_walking.gif" 0.070000
+graphic 9 "assets\player_idle_left.png"
+graphic 10 "assets\player_idle.png"
+graphic 11 "assets\grass.png"
+graphic 12 "assets\barrel_defused.gif" 0.400000
+graphic 13 "assets\ladybird_idle_left.png"
+graphic 14 "assets\ladybird_idle_right.png"
+graphic 15 "assets\ladybird_walk_left.gif" 0.100000
+graphic 16 "assets\ladybird_walk_right.gif" 0.100000
+graphic 17 "assets\ladybird_surprise.gif" 0.100000
+graphic 18 "assets\ladybird_flight.gif" 0.020000
+sound 0 "assets\toast_notif.wav"
+sound 1 "assets\jump.wav"
+sound 2 "assets\boom.wav"
+sound 3 "assets\fuse.wav"
+sound 4 "assets\door_open.wav"
+soundstream 5 "assets\ambience.wav"
+soundstream 6 "assets\wind.wav"
+ent 0 1206.000000 487.000000 50.000000 50.000000 255 255 255 255 -1
+ent 4 6418.628299 57.000000
+ent 4 2718.628299 57.000000
+ent 3 10400.000000 157.000000 50.000000 100.000000 "levels\lvl_inter.sg" -1 0
+ent 1 9710.000000 1080.000000 50.000000 1080.000000 "E to interact." 0 -1
+ent 2 8430.000000 57.000000 80.000000 100.000000 0 1
+ent 1 7790.000000 1080.000000 50.000000 1080.000000 "Watch out! Smother him before he explodes." 0 -1
+ent 1 5870.000000 1080.000000 50.000000 1080.000000 "Vacuum to refill your ammo." 0 -1
+ent 0 5376.000000 600.000000 40.000000 620.000000 128 23 72 255 -1
+ent 1 3950.000000 1080.000000 50.000000 1080.000000 "LCTRL to change fire mode. " 0 -1
+ent 0 3456.000000 200.000000 40.000000 220.000000 128 23 72 255 -1
+ent 1 2030.000000 1080.000000 50.000000 1080.000000 "W or MOUSE 1 to fire." 0 -1
+ent 1 100.000000 1080.000000 100.000000 1080.000000 "A, D to move. Hold SPACE to jump." 0 -1
+ent 0 9600.000000 57.000000 1920.000000 57.000000 255 255 255 255 11
+ent 0 7680.000000 57.000000 1920.000000 57.000000 255 255 255 255 11
+ent 0 5760.000000 57.000000 1920.000000 57.000000 255 255 255 255 11
+ent 0 3840.000000 57.000000 1920.000000 57.000000 255 255 255 255 11
+ent 0 1920.000000 57.000000 1920.000000 57.000000 255 255 255 255 11
+ent 0 0.000000 57.000000 1920.000000 57.000000 255 255 255 255 11

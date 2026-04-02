@@ -147,7 +147,6 @@
     <ClCompile Include="common.cpp" />
     <ClCompile Include="deserialise.cpp" />
     <ClCompile Include="edit.cpp" />
-    <ClCompile Include="edit.cpp" />
     <ClCompile Include="engine\engine_audio.cpp" />
     <ClCompile Include="engine\engine_common.cpp" />
     <ClCompile Include="engine\engine_render.cpp" />
@@ -165,7 +164,6 @@
   <ItemGroup>
     <ClInclude Include="common.hpp" />
     <ClInclude Include="deserialise.hpp" />
-    <ClInclude Include="edit.hpp" />
     <ClInclude Include="edit.hpp" />
     <ClInclude Include="engine\engine.hpp" />
     <ClInclude Include="engine\engine_audio.hpp" />

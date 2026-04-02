@@ -25,6 +25,7 @@ graphic 15 "assets\ladybird_walk_left.gif" 0.1
 graphic 16 "assets\ladybird_walk_right.gif" 0.1
 graphic 17 "assets\ladybird_surprise.gif" 0.1
 graphic 18 "assets\ladybird_flight.gif" 0.02
+graphic 19 "assets\door.png"
 ent 0 0 57 1920 57 255 255 255 255 11
 ent 0 1920 57 1920 57 255 255 255 255 11
 ent 0 3840 57 1920 57 255 255 255 255 11
@@ -40,6 +41,6 @@ ent 1 5870 1080 50 1080 "Vacuum to refill your ammo." 0 -1
 ent 1 7790 1080 50 1080 "Watch out! Smother him before he explodes." 0 -1
 ent 2 8390 57 80.0 100 0 1
 ent 1 9710 1080 50 1080 "E to interact." 0 -1
-ent 3 10400 157 50 100 "levels\lvl_inter.sg" -1 0
+ent 3 10400 257 100 200 "levels\lvl_inter.sg" -1 0 19
 ent 4 2720 57
 ent 4 6420 57
