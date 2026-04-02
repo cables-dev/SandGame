@@ -2,6 +2,8 @@
 #include "raylib.h"
 #include <cstdint>
 
+#define NEEDS_FREE
+
 struct AABB {
 	double top_left_x{};
 	double top_left_y{};

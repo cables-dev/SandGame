@@ -194,4 +194,16 @@ void ScreenToWorld(double x, double y, double* out_x, double* out_y) {
     WorldToScreen(x, y, out_x, out_y);
 }
 
+NEEDS_FREE char* CreateRandomFileName(const char* path_prefix, const char* extension) {
+    auto part_1 = PseudoRandom_GetU32() & 0xffff;
+    auto part_2 = PseudoRandom_GetU32() & 0xff;
+    auto part_3 = PseudoRandom_GetU32() & 0xff;
+    auto part_4 = PseudoRandom_GetU32() & 0xffff;
+
+    auto size_required = snprintf(nullptr, 0, "%s%d-%d-%d-%d%s", path_prefix, part_1, part_2, part_3, part_4, extension);
+    char* result = (char*)malloc(size_required + 2);
+    size_required = snprintf(result, size_required + 2, "%s%d-%d-%d-%d%s", path_prefix, part_1, part_2, part_3, part_4, extension);
+    return result;
+}
+
 

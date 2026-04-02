@@ -353,6 +353,7 @@ void Serial_SerialiseLevelDoor(const EntityLevelDoor* door, std::string& out_ser
     const char* next_level_path{};
     int lock_flags{};
     int unlock_flags{};
+    GraphicResource rsc{};
 
     AABB_GetCornerCoords(&door->aabb, AABB_TOP_LEFT, &top_left_x, &top_left_y);
     w = AABB_GetWidth(&door->aabb);
@@ -360,6 +361,7 @@ void Serial_SerialiseLevelDoor(const EntityLevelDoor* door, std::string& out_ser
     next_level_path = door->next_level_path;
     lock_flags = door->lock_flag;
     unlock_flags = door->unlock_flag;
+    rsc = door->sprite;
 
     Serial_TrySerialiseDouble(top_left_x, out_serial);
     Serial_TrySerialiseDouble(top_left_y, out_serial);
@@ -368,6 +370,7 @@ void Serial_SerialiseLevelDoor(const EntityLevelDoor* door, std::string& out_ser
     Serial_TrySerialiseStringLiteral(next_level_path, out_serial);
     Serial_TrySerialiseInteger(lock_flags, out_serial);
     Serial_TrySerialiseInteger(unlock_flags, out_serial);
+    Serial_TrySerialiseGraphicResource(rsc, out_serial);
 }
 
 bool Serial_DeserialiseLevelDoor(EntityLevelDoor* out_door, char** serial, DeserialiseError* out_error) {
@@ -379,6 +382,7 @@ bool Serial_DeserialiseLevelDoor(EntityLevelDoor* out_door, char** serial, Deser
     int lock_flags{};
     int unlock_flags{};
     bool result{};
+    GraphicResource rsc{};
 	StringChomper chomp{};
 
     StringChomper_Create(&chomp, *serial);
@@ -430,8 +434,15 @@ bool Serial_DeserialiseLevelDoor(EntityLevelDoor* out_door, char** serial, Deser
         *out_error = DeserialiseError{ "Could not read lock_flags for Level Door!", StringChomper_GetPointer(&chomp)}; 
         return false;
     }
+
+    StringChomper_SkipWhitespace(&chomp);
+    result = StringChomper_ReadInteger(&chomp, (GraphicResource*)&rsc);
+    if (!result) {
+        *out_error = DeserialiseError{ "Could not read sprite_resource for Level Door!", StringChomper_GetPointer(&chomp)}; 
+        return false;
+    }
     
-    LevelDoor_Create(out_door, top_left_x, top_left_y, w, h, next_level_path, lock_flags, unlock_flags);
+    LevelDoor_Create(out_door, top_left_x, top_left_y, w, h, next_level_path, rsc, lock_flags, unlock_flags);
     *serial = StringChomper_GetPointer(&chomp);
     return true;
 }

@@ -20,6 +20,9 @@ constexpr auto EDIT_MODE_VARIABLE_FONT_SIZE = 20;
 constexpr auto EDIT_MODE_VARIABLE_TEXT_Y_OFFSET = 10;
 constexpr auto EDIT_MODE_VARIABLE_FONT_COLOUR = WHITE_COLOUR;
 constexpr auto EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR = GameColour{ 0xbf2f5fff };
+constexpr auto EDIT_MODE_HELP_FONT_SIZE = 20;
+constexpr auto EDIT_MODE_HELP_FONT_COLOUR = WHITE_COLOUR;
+constexpr auto EDIT_MODE_HELP_TEXT_Y = 400;
 
 constexpr Color PARTICLE_COLOURS[]{
 	Color{243, 227, 124, 255},
@@ -68,7 +71,7 @@ void RenderBarrel(RenderData* data, const EntityBarrel* barrel, float dt_s) {
 	WorldToScreen(bottom_left_x_w , bottom_left_y_w , &bottom_left_x, &bottom_left_y);
 
 	auto sprite_rsc = (barrel->defused) ? GRAPHIC_RSC_BARREL_DEFUSED : barrel->active_sprite;
-	auto needs_reset = barrel->sprite_changed;
+	auto needs_reset = barrel->last_sprite;
 	if (needs_reset)
 		EngineRender_ResetGraphicResource(&data->engine, sprite_rsc);
 
@@ -94,7 +97,7 @@ void RenderLevelDoor(RenderData* data, const EntityLevelDoor* door, float dt_s) 
 	auto w = bottom_right_x - top_left_x;/*------------------------------------------------------------*/
 	auto h = bottom_right_y - top_left_y;/*------------------------------------------------------------*/
 	auto colour = GameColour{ 0xffffffff };/*----------------------------------------------------------*/
-	EngineRender_DrawRectangle(&data->engine, top_left_x, top_left_y, w, h, &colour);/*-- -------------*/
+	EngineRender_DrawGraphicResource(&data->engine, door->sprite, top_left_x, top_left_y, &colour, dt_s);
 }
 
 GraphicResource Render_RenderLadybirdGetGraphicResource(RenderData* data, const EntityLadybird* ladybird) {
@@ -381,7 +384,7 @@ void Render_RenderEditModeVariableDouble(
 ) {
 	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR ;
 	char snprintf_buffer[200];
-	snprintf(snprintf_buffer, 200, "%s %f", var->description, *var->item);
+	snprintf(snprintf_buffer, 200, "%s %.1f", var->description, *var->item);
 
 	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
 }
@@ -396,6 +399,84 @@ void Render_RenderEditModeVariableInteger(
 	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
 	char snprintf_buffer[200];
 	snprintf(snprintf_buffer, 200, "%s %d", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableUnsignedInteger(
+	RenderData* data, 
+	EditModeVariableUnsignedInteger* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+	char snprintf_buffer[200];
+	snprintf(snprintf_buffer, 200, "%s %u", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableBoolean(
+	RenderData* data, 
+	EditModeVariableBoolean* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+	char snprintf_buffer[200];
+	snprintf(snprintf_buffer, 200, "%s %d", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableGraphicResource(
+	RenderData* data, 
+	EditModeVariableGraphicResource* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+	char snprintf_buffer[200];
+	snprintf(snprintf_buffer, 200, "%s %d", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableAudioResource(
+	RenderData* data, 
+	EditModeVariableAudioResource* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+	char snprintf_buffer[200];
+	snprintf(snprintf_buffer, 200, "%s %d", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableCString(
+	RenderData* data, 
+	EditModeVariableCString* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	if (!var->item || !*var->item)
+		return;
+
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+	char snprintf_buffer[100];
+	auto snprintf_chars = snprintf(snprintf_buffer, 100, "%s %s", var->description, *var->item);
+	if (snprintf_chars >= 100) {			// Snip string if too long...
+		snprintf_buffer[98] = '.';
+		snprintf_buffer[97] = '.';
+		snprintf_buffer[96] = '.';
+	}
 
 	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
 }
@@ -446,14 +527,14 @@ void Render_RenderEditModeVariable(
 ) {
 	switch(var->type) {
 	case EDIT_MODE_VAR_DOUBLE: { Render_RenderEditModeVariableDouble(data, &var->var.var_double, is_selected, *in_out_x, *in_out_y); break; }
-	//case EDIT_MODE_VAR_U32: { memcpy_s(&var->var, sizeof(var->var), var, sizeof(EditModeVariableUnsignedInteger)); break; }
+	case EDIT_MODE_VAR_U32: { Render_RenderEditModeVariableUnsignedInteger(data, &var->var.var_unsigned_integer, is_selected, *in_out_x, *in_out_y); break; }
 	case EDIT_MODE_VAR_INT: { Render_RenderEditModeVariableInteger(data, &var->var.var_integer, is_selected, *in_out_x, *in_out_y); break; }
 	case EDIT_MODE_VAR_COLOUR: { Render_RenderEditModeVariableColour(data, &var->var.var_colour, is_selected, *in_out_x, *in_out_y); break; }
-	//case EDIT_MODE_VAR_BOOLEAN: {}
-	//case EDIT_MODE_VAR_GRAPHIC_RESOURCE: {}
-	//case EDIT_MODE_VAR_AUDIO_RESOURCE: {}
-	//case EDIT_MODE_VAR_STRING: {}
-	//default: {}
+	case EDIT_MODE_VAR_BOOLEAN: { Render_RenderEditModeVariableBoolean(data, &var->var.var_boolean, is_selected, *in_out_x, *in_out_y); break; }
+	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { Render_RenderEditModeVariableGraphicResource(data, &var->var.var_graphic_resource, is_selected, *in_out_x, *in_out_y); break; }
+	case EDIT_MODE_VAR_AUDIO_RESOURCE: { Render_RenderEditModeVariableAudioResource(data, &var->var.var_audio_resource, is_selected, *in_out_x, *in_out_y); break; }
+	case EDIT_MODE_VAR_STRING: { Render_RenderEditModeVariableCString(data, &var->var.var_c_string, is_selected, *in_out_x, *in_out_y); break; }
+	default: { assert(false && "Render_RenderEditModeVariable: Unaccounted variable type encountered!"); }
 	}
 
 	*in_out_y += EDIT_MODE_VARIABLE_FONT_SIZE + EDIT_MODE_VARIABLE_TEXT_Y_OFFSET;
@@ -479,6 +560,24 @@ void Render_RenderEditModeVariables(RenderData* data, EditModeData* edit, Engine
 	} while (last_node != var_node);
 }
 
+constexpr auto* help_text =							// We store the text here instead of EditModeData so we 
+"Welcome to edit mode.\n"							// can cache its width.
+"LEFT/RIGHT ARROW to cycle entities.\n"
+"UP/DOWN ARROW to cycle entity variables,\n"
+"L/H for fine control, J/K for coarse control.\n"
+"MIDDLE MOUSE to delete entity under cursor.\n"
+"N to save this level to disc.\n"
+"B to exit.\n"
+"Q to toggle this text.";
+void Render_RenderEditModeHelpText(RenderData* data, EditModeData* edit, EngineTime dt) {
+	static auto text_w = EngineRender_MeasureTextWidth(&data->engine, help_text, EDIT_MODE_HELP_FONT_SIZE);
+	static auto half_text_w = text_w / 2.0;
+	auto screen_w = EngineRender_GetCameraWidth(&data->engine);
+	auto half_screen_w = screen_w / 2.0;
+	if (edit->show_help)
+		EngineRender_DrawTextAbsolute(&data->engine, help_text, half_screen_w - half_text_w, EDIT_MODE_HELP_TEXT_Y, EDIT_MODE_HELP_FONT_SIZE, &EDIT_MODE_HELP_FONT_COLOUR);
+}
+
 void Render_RenderEditMode(RenderData* data, EditModeData* edit, EngineTime dt) {
 	// We need to display toast text when edit mode is disabled, so we call this before the enabled check.
 	Render_RenderEditModeToast(data, edit, dt);
@@ -489,6 +588,7 @@ void Render_RenderEditMode(RenderData* data, EditModeData* edit, EngineTime dt) 
 	Render_RenderEditModePrototypeEntity(data, edit, dt);
 	Render_RenderEditModeCursorText(data, edit, dt);
 	Render_RenderEditModeVariables(data, edit, dt);
+	Render_RenderEditModeHelpText(data, edit, dt);
 }
 
 bool Render_ShouldGameClose(const RenderData* data) {

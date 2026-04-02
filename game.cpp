@@ -135,7 +135,9 @@ void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, boo
 		player_x_sand = projected_player_x_sand;
 	}
 
-	auto sand_query_bottom = SandPit_QueryRegion(world, (player_x_sand - player_w_sand / 2), player_y_sand, player_w_sand, 1);
+	auto player_y_vel = player->y_speed;
+	auto bottom_query_height = player_h_sand / 2;
+	auto sand_query_bottom = SandPit_QueryRegion(world, (player_x_sand - player_w_sand / 2), player_y_sand + bottom_query_height, player_w_sand, 1+bottom_query_height);
 	auto is_falling = player_y_sand > 0 && (sand_query_bottom.grain_count + sand_query_bottom.solid_count == 0);
 	if (is_falling)
 		IncrementPlayerYVelocity(player, -G * dt);
@@ -153,8 +155,6 @@ void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, boo
 	}
 
 	player_y_sand += (player->y_speed / world->grain_size) * dt;
-
-	// Snap y coordinate if we are intersecting with sand 
 	auto sand_query_top = SandPit_QueryRegion(world, (player_x_sand - player_w_sand / 2), (player_y_sand + player_h_sand + 2), player_w_sand, player_h_sand );
 
 	// Hitting our head
@@ -162,6 +162,7 @@ void DoPlayerMovement(Player* player, SandGame* game, bool left, bool right, boo
 		SetPlayerYVelocity(player, 0.0);
 		player_y_sand = std::min(player_y_sand - 2, (sand_query_top.lowest_solid_y - player_h_sand));
 	} else if (!jump && (sand_query_bottom.any_grain || sand_query_bottom.any_solid)) {	
+		// Snap y coordinate if we are intersecting with sand 
 		SetPlayerYVelocity(player, 0.0);
 		player_y_sand = std::max(sand_query_bottom.highest_grain_y, sand_query_bottom.highest_solid_y) + 1;
 	}
@@ -417,11 +418,10 @@ void UpdateSandPit(
 	SandPit_SimulateStep(pit, sand_sector_x, sand_sector_y);
 }
 
-// Returns true if we should skip this frame
+// Returns true if we should skip this frame. not used anymore.
 bool SandGame_NewUpdate(SandGame* game) {
 	game->toast = nullptr;
-	game->skip_frame = std::max(0, game->skip_frame - 1);
-	return game->skip_frame > 0;
+	return false;
 }
 
 void SandGame_ThinkEntities(SandGame* game, double dt) {
@@ -479,7 +479,7 @@ void SandGame_Update(SandGame* game, GameActionFlags* pressed, GameActionFlags* 
 	SandGame_HandleFreeze(game, dt_s);
 	SandGame_HandleTimeElapse(game, dt_s);
 
-	if (SandGame_IsFrozen(game) || first_frame)
+	if (SandGame_IsFrozen(game) || first_frame || dt_s >= 0.1)			// If we are running under 10 fps just don't bother
 		return;
 
 	player_bbox = game->player.bbox;						// We make a copy since we are going to scale it.
@@ -640,15 +640,17 @@ void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, 
 }
 
 void RectangleObstacle_Place(Entity* ent, SandGame* game) {
-	auto* rect = &ent->entity.rect;
-	auto aabb = rect->aabb;
-	AABB_ScaleByReciprocal(&aabb, game->pit.grain_size);
+	auto* rect = &ent->entity.rect;								// Scaling from world coords -> sand cooords should
+	auto aabb = rect->aabb;										// be the responsibility of SandPit but we're in too deep 
+	AABB_ScaleByReciprocal(&aabb, game->pit.grain_size);		// now...
 	SandPit_PlaceSolidAABB(&game->pit, &aabb);
 }
 
 void RectangleObstacle_Remove(Entity* ent, SandGame* game) {
-	auto* rect = &ent->entity.rect;
-	SandPit_ClearRegion(&game->pit, &rect->aabb, true);
+	auto* rect = &ent->entity.rect;								// -||-
+	auto aabb = rect->aabb;
+	AABB_ScaleByReciprocal(&aabb, game->pit.grain_size);
+	SandPit_ClearRegion(&game->pit, &aabb, true);
 }
 
 void RectangleObstacle_Think(Entity* rect, SandGame* game, double dt) {
@@ -737,7 +739,6 @@ void Barrel_Create(EntityBarrel* barrel, double top_left_x, double bottom_y, dou
 	barrel->idle_sprite = idle_sprite;
 	barrel->explode_sprite = explode_sprite;
 	barrel->active_sprite = idle_sprite;
-	barrel->sprite_changed = false;
 	barrel->fuse_lit = false;
 }
 
@@ -762,7 +763,6 @@ void Barrel_Explode(Entity* barrel, SandGame* game) {
 
 void Barrel_ChangeGraphic(EntityBarrel* barrel, GraphicResource new_rsc) {
 	barrel->active_sprite = new_rsc;
-	barrel->sprite_changed = true;
 }
 
 void Barrel_LightFuse(EntityBarrel* barrel, SandGame* game) {
@@ -782,7 +782,7 @@ void Barrel_RefreshSightAABB(EntityBarrel* barrel) {
 
 void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 	auto* barrel = &ent->entity.barrel;
-	barrel->sprite_changed = false;
+	barrel->last_sprite = barrel->active_sprite;
 
 	if (barrel->defused)
 		return;
@@ -794,8 +794,8 @@ void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 	auto smother_query = SandPit_QueryRegion(world, &barrel_aabb);
 
 	if (smother_query.grain_count >= 0.7 * (smother_query.w * smother_query.h)) {
+		Barrel_ChangeGraphic(barrel, barrel->defuse_sprite);
 		barrel->defused = true;
-		barrel->sprite_changed = true;
 	}
 
 	// Explode check
@@ -819,7 +819,7 @@ AABB* Barrel_GetAABB(Entity* ent) {
 	return &barrel->aabb;
 }
 
-void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_y, double w, double h, const char* next_level_path, int lock_flag, int unlock_flag) {
+void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_y, double w, double h, const char* next_level_path, GraphicResource sprite, int lock_flag, int unlock_flag) {
 	door->vtable = {
 		LevelDoor_Place,
 		LevelDoor_Remove,
@@ -830,6 +830,7 @@ void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_
 	door->next_level_path = next_level_path;
 	door->lock_flag = lock_flag;
 	door->unlock_flag = unlock_flag;
+	door->sprite = sprite;
 }
 
 void LevelDoor_Place(Entity* ent, SandGame* game) {

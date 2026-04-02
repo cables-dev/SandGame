@@ -240,6 +240,7 @@ void SandPitSector_RemoveGrainIfExists(SandPitSector* sector, std::int64_t x, st
 	auto* next = SandPitSector_Get(sector, next_idx);
 	SandPitCell_SetNextIdx(prev, next_idx);
 	SandPitCell_SetPrevIdx(next, prev_idx);
+	sector->need_sim = true;
 }
 
 void SandPitSector_AddGrain(
@@ -770,7 +771,7 @@ void SandPitSector_NextTick(SandPitSector* sect) {
 }
 
 bool SandPit_IsSectorInBounds(
-	SandPit* pit,
+	const SandPit* pit,
 	std::uint32_t sector_x,
 	std::uint32_t sector_y
 ) {
@@ -787,7 +788,7 @@ void SandPit_SimulateStep(
 	std::uint32_t y{};
 
 	if (!SandPit_IsSectorInBounds(pit, sector_x, sector_y))
-		assert(false);
+		return;
 
 	auto* sector = SandPit_GetSector(pit, sector_x, sector_y);
 	if (sector->sand_head == nullptr || sector->need_sim == false)
@@ -894,6 +895,8 @@ void SandPit_ForEachGrain(
 ) {
 	std::uint32_t x{};
 	std::uint32_t y{};
+	if (!SandPit_IsSectorInBounds(pit, sector_x, sector_y))
+		return;
 	auto* sector = SandPit_GetSector(pit, sector_x, sector_y);
 	auto node_index = SandPitCell_GetNextIdx(*sector->sand_head);
 	auto* node = SandPitSector_Get(sector, node_index);

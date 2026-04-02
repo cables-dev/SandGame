@@ -33,3 +33,5 @@ void EngineInput_Create(EngineInputConfig* bindings);
 void EngineInput_SetBinding(EngineInputConfig* bindings, GameActionFlag action, InputKey bind_to);
 void EngineInput_FetchState(const EngineInputConfig* bindings, GameActionFlags* out_flags_pressed, GameActionFlags* out_flags_held, int* out_mouse_x, int* out_mouse_y);
 void EngineInput_Destroy(EngineInputConfig* bindings);
+
+char* EngineInput_ShowEntryBox(const char* title, const char* message, const char* placeholder_text=nullptr);

@@ -3,8 +3,6 @@
 #include "resource.hpp"
 #include <cstdint>
 
-#define NEEDS_FREE
-
 constexpr std::uint32_t LOWEST_Y_COORDINATE{ 0 };
 constexpr std::uint32_t WINDOW_WIDTH{ 1920 };
 constexpr std::uint32_t WINDOW_HEIGHT{ 1080 };
@@ -31,6 +29,9 @@ enum GameActionDefs : GameAction {
 	ACTION_EDIT_MODE_INCREASE_COARSE_DEF,
 	ACTION_EDIT_MODE_DECREASE_FINE_DEF,
 	ACTION_EDIT_MODE_DECREASE_COARSE_DEF,
+	ACTION_EDIT_MODE_DELETE_DEF,
+	ACTION_EDIT_MODE_TOGGLE_HELP_DEF,
+	ACTION_EDIT_MODE_SAVE_FILE_DEF,
 	ACTION_MAX
 };
 
@@ -52,6 +53,9 @@ const auto ACTION_EDIT_MODE_INCREASE_FINE = GameActionFlag_FromAction(ACTION_EDI
 const auto ACTION_EDIT_MODE_INCREASE_COARSE = GameActionFlag_FromAction(ACTION_EDIT_MODE_INCREASE_COARSE_DEF);
 const auto ACTION_EDIT_MODE_DECREASE_FINE  = GameActionFlag_FromAction(ACTION_EDIT_MODE_DECREASE_FINE_DEF);
 const auto ACTION_EDIT_MODE_DECREASE_COARSE = GameActionFlag_FromAction(ACTION_EDIT_MODE_DECREASE_COARSE_DEF);
+const auto ACTION_EDIT_MODE_DELETE = GameActionFlag_FromAction(ACTION_EDIT_MODE_DELETE_DEF);
+const auto ACTION_EDIT_MODE_TOGGLE_HELP = GameActionFlag_FromAction(ACTION_EDIT_MODE_TOGGLE_HELP_DEF);
+const auto ACTION_EDIT_MODE_SAVE_FILE = GameActionFlag_FromAction(ACTION_EDIT_MODE_SAVE_FILE_DEF);
 
 struct StringChomper {
     char* ptr;
@@ -97,3 +101,4 @@ bool StringChomper_ReadDouble(
 void WorldToScreen(double x, double y, double* out_x, double* out_y);
 void WorldToScreen(const AABB* aabb, AABB* out);
 void ScreenToWorld(double x, double y, double* out_x, double* out_y);
+NEEDS_FREE char* CreateRandomFileName(const char* file_prefix, const char* file_extension);

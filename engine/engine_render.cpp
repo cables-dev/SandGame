@@ -1,5 +1,7 @@
 #include "engine_render.hpp"
 #include <cassert>
+#include <string.h>
+#include <cstdlib>
 
 Color GameColourToRaylibColor(const GameColour* gc) {
 	Color result{};
@@ -408,9 +410,21 @@ bool EngineRender_IsOnScreen(const EngineRenderData* data, const AABB* aabb) {
 	return AABB_Intersects(&data->camera.aabb, aabb);
 }
 
+void EngineRender_CopyAndSetToastText(EngineRenderData* data, char* str) {
+	free(data->toast);
+	auto str_len = strlen(str);
+	auto* buffer = (char*)(malloc(str_len + 1));
+	buffer[str_len] = '\0';
+	memcpy_s(buffer, str_len + 1, str, str_len);
+
+	data->toast = buffer;
+}
+
+// Since callers might pass dynamically allocated strings with
+// no lifetime guarantee, we must make a local copy of toast text.
 void EngineRender_SetToast(EngineRenderData* data, const char* text) {
 	data->toast_display_duration = FX_TOAST_DISPLAY_DURATION;
-	data->toast = text;
+	EngineRender_CopyAndSetToastText(data, (char*)text);
 }
 
 bool EngineRender_DoWhiteFlash(const EngineRenderData* data) {
@@ -519,12 +533,15 @@ bool EngineRender_DoDrawToast(const EngineRenderData* r) {
 }
 
 void EngineRender_ClearToast(EngineRenderData* r) {
-	r->toast = "";
+	r->toast = nullptr;
 	r->toast_display_duration = -1.0;
 }
 
 void EngineRender_RenderToast(EngineRenderData* r) {
 	auto* toast = r->toast;
+	if (!toast)
+		return;
+
 	auto text_color = FX_TOAST_FONT_COLOUR;
 	auto fade_denominator = FX_TOAST_DISPLAY_DURATION - FX_TOAST_FADE_AFTER;
 	if (r->toast_display_duration <= fade_denominator) {

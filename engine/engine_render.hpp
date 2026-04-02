@@ -80,8 +80,8 @@ void EngineBackground_Draw(EngineRenderData* data, const EngineBackground* bg, f
 struct EngineRenderData {
 	RenderCamera camera{};
 	EngineBackground background{};
-	const char* toast = "";
-	float toast_display_duration = 0.0;
+	char* toast = nullptr;						// Since callers might pass dynamically allocated strings with
+	float toast_display_duration = 0.0;			// no lifetime guarantee, we will make a local copy.
 	float white_flash_duration = 0.0;
 	float black_fade_in_out_duration = 0.0;
 	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES]{};

@@ -10,25 +10,27 @@
 #include "deserialise.hpp"
 #include "edit.hpp"
 #include <cassert>
+#include <time.h>
 
 void DefaultKeyBindings(EngineInputConfig* bindings);
 
 int main()
 {
+	SandGame game;
 	DeserialiseError err;
 	DeserialiseMetadata md;
 	EngineInputConfig bindings;
 	RenderData render_data;
 	EngineAudioData audio_data;
 	EditModeData edit;
-	SandGame game;
 	GameActionFlags pressed_actions;
 	GameActionFlags held_actions;
 	int cursor_x;
 	int cursor_y;
 
 	EditMode_Create(
-		&edit
+		&edit,
+		SAND_SIZE
 	);
 	DefaultKeyBindings(
 		&bindings
@@ -45,19 +47,19 @@ int main()
 		&audio_data
 	);
 
-	assert(Level_LoadFile(
+	Level_LoadFile(
 		&audio_data, 
 		&render_data, 
 		&game, 
 		&md, 
 		"levels\\lvl_empty.sg", 
 		&err
-	));
+	);
 
 	// Game loop
 	while (!Render_ShouldGameClose(&render_data)) {
 		if (SandGame_ShouldLoadNewLevel(&game)) {
-			assert(Level_LoadFile(&audio_data, &render_data, &game, &md, SandGame_GetNewLevelPath(&game), &err));
+			Level_LoadFile(&audio_data, &render_data, &game, &md, SandGame_GetNewLevelPath(&game), &err);
 		}
 
 		auto dt = Engine_GetFrameTime();
@@ -65,7 +67,7 @@ int main()
 		EditMode_ReceiveInput(&edit, &pressed_actions, &held_actions, cursor_x, cursor_y);
 		SandGame_ReceiveInput(&game, &pressed_actions, &held_actions, cursor_x, cursor_y);
 		SandGame_Update(&game, &pressed_actions, &held_actions, cursor_x, cursor_y, dt);
-		EditMode_Update(&edit, &game, dt);
+		EditMode_Update(&edit, &game, &md, dt);
 
 		Render_Begin(&render_data);
 		Render_RenderGame(&render_data, &game, dt);
@@ -112,10 +114,13 @@ void DefaultKeyBindings(EngineInputConfig* bindings) {
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_PLACE_ENTITY, KEY_MOUSE_LEFT_BUTTON);
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_SELECT_NEXT, KEY_DOWN);
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_SELECT_PREV, KEY_UP);
-	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_INCREASE_FINE , KEY_H);
+	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_INCREASE_FINE , KEY_L);
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_INCREASE_COARSE, KEY_J);
-	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_DECREASE_FINE , KEY_L);
+	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_DECREASE_FINE , KEY_H);
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_DECREASE_COARSE, KEY_K);
+	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_DELETE, KEY_MOUSE_MIDDLE_BUTTON);
+	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_TOGGLE_HELP, KEY_Q);
+	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_SAVE_FILE, KEY_N);
 }
 //⠀⠀⠀⠀⠀⠸⣧⠀⢀⣴⣿⡛⠛⠛⠛⠛⠛⠛⠛⣛⣿⢷⣄⣼⠇⠀⠀⠀⠀
 //⠀⠀⠀⠀⠀⠀⠙⣷⡟⠁⠈⠻⢦⣤⣤⣤⡤⠶⠟⠋⠁⣠⡿⠃⠀⠀⠀⠀⠀	- "I like games and gaming and consoles and controllers and Call of Duty and Mario.

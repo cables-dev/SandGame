@@ -1,6 +1,7 @@
 #include "engine_common.hpp"
 #include <cstdlib>
 #include <cassert>
+#include <time.h>
 
 constexpr auto SECONDS_IN_HOURS = 60.0 * 60.0;
 constexpr auto SECONDS_IN_MINUTES = 60.0;
@@ -99,7 +100,7 @@ bool AABB_ContainsPoint(const AABB* aabb, double x, double y) {
 	auto w = AABB_GetWidth(aabb);
 	auto h = AABB_GetHeight(aabb);
 	auto domain = x <= aabb->top_left_x + w && x >= aabb->top_left_x;
-	auto range = y >= aabb->top_left_y && y <= aabb->top_left_y + h;
+	auto range = y <= aabb->top_left_y && y >= aabb->top_left_y - h;
 	return domain && range;
 }
 
@@ -111,14 +112,18 @@ double AABB_GetHeight(const AABB* aabb) {
 	return aabb->h;
 }
 
-// Streets are saying this is faster than rand...
+static bool random_init = false;
 static std::uint32_t random_seed = 0xFAFFAC;
 
 void PseudoRandom_Seed(std::uint32_t seed) {
 	random_seed = seed;
+	random_init = true;
 }
 
+// Streets are saying this is faster than rand...
 std::uint32_t PseudoRandom_GetU32() {
+	if (!random_init)
+		PseudoRandom_Seed(time(0));
 	random_seed ^= random_seed << 13;
     random_seed ^= random_seed >> 17;
     random_seed ^= random_seed << 5;

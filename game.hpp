@@ -17,7 +17,7 @@ constexpr auto PLAYER_WIDTH = 24;
 constexpr auto PLAYER_HEIGHT = 40;
 constexpr auto MIN_DISTANCE_FOR_SAND_PLACE_MODE = 100;
 constexpr auto G = 900.0;
-constexpr auto PLAYER_SAND_CAPACITY = 75000;
+constexpr auto PLAYER_SAND_CAPACITY = 7500;
 constexpr auto BARREL_EXPLOSION_DELAY_S = 0.5;
 constexpr auto DOOR_LOADING_DELAY_S = 1.5;
 constexpr auto DEFAULT_MAX_ENTITIES = 1000;
@@ -74,7 +74,6 @@ struct SandGame {
 	NEEDS_FREE const char* level_buffer = nullptr;  // The currently loaded level file. Must be kept alive so entities can reference internal strings like string toast messages. 
 	const char* new_level_path = nullptr;
 	bool do_time_tick = true;
-	int skip_frame = 3;								// This fixes a bug I cba to find
 };
 using SandGameForEachEntityFn_t = void(*)(Entity*);
 
@@ -214,8 +213,9 @@ struct EntityBarrel {
 	AABB sight_aabb{};
 	GraphicResource idle_sprite{-1};
 	GraphicResource explode_sprite{-1};
+	GraphicResource defuse_sprite{ GRAPHIC_RSC_BARREL_DEFUSED };
 	GraphicResource active_sprite{-1};
-	bool sprite_changed{};
+	GraphicResource last_sprite{-1};
 	bool fuse_lit{};
 	bool defused = false;
 	float time_until_explosion_s{};
@@ -236,6 +236,7 @@ AABB* Barrel_GetAABB(Entity* rect);
 struct EntityLevelDoor {
 	EntityVTable vtable;						// !Important 
 	AABB aabb{};
+	GraphicResource sprite{};
 	const char* next_level_path{};
 	int lock_flag{};
 	int unlock_flag{};
@@ -246,6 +247,7 @@ void LevelDoor_Create(
 	double top_left_y,
 	double w, double h,							// w,h should probably be fixed	
 	const char* next_level_path,
+	GraphicResource sprite,
 	int lock_flag = -1,
 	int unlock_flag = -1
 );

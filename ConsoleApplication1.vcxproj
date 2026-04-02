@@ -106,7 +106,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\cable\source\repos\ConsoleApplication1\ConsoleApplication1\raylib\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>raylib\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SupportJustMyCode>true</SupportJustMyCode>
@@ -119,7 +119,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\cable\source\repos\ConsoleApplication1\ConsoleApplication1\raylib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>raylib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>raylib.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winmm.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -131,7 +131,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\cable\source\repos\ConsoleApplication1\ConsoleApplication1\raylib\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>raylib\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -139,7 +139,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\cable\source\repos\ConsoleApplication1\ConsoleApplication1\raylib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>raylib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>raylib.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winmm.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -151,8 +151,11 @@
     <ClCompile Include="engine\engine_audio.cpp" />
     <ClCompile Include="engine\engine_common.cpp" />
     <ClCompile Include="engine\engine_render.cpp" />
+    <ClCompile Include="engine\engine_input_win32.cpp" />
+    <ClCompile Include="engine\engine_ioctl.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="engine\engine_input.cpp" />
+    <ClCompile Include="libtinyfiledialogs\tinyfiledialogs.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="render.cpp" />
     <ClCompile Include="sand_sim.cpp" />
@@ -168,8 +171,10 @@
     <ClInclude Include="engine\engine_audio.hpp" />
     <ClInclude Include="engine\engine_common.hpp" />
     <ClInclude Include="engine\engine_render.hpp" />
+    <ClInclude Include="engine\engine_ioctl.hpp" />
     <ClInclude Include="game.hpp" />
     <ClInclude Include="engine\engine_input.hpp" />
+    <ClInclude Include="libtinyfiledialogs\tinyfiledialogs.h" />
     <ClInclude Include="render.hpp" />
     <ClInclude Include="resource.hpp" />
     <ClInclude Include="sand_sim.hpp" />
@@ -201,6 +206,7 @@
     <Image Include="assets\barrel_terrorist_explode.gif" />
     <Image Include="assets\barrel_terrorist_idle.gif" />
     <Image Include="assets\dark_background.png" />
+    <Image Include="assets\door.png" />
     <Image Include="assets\ladybird_flight.gif" />
     <Image Include="assets\ladybird_idle_left.png" />
     <Image Include="assets\ladybird_idle_right.png" />
