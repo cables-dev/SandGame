@@ -10,8 +10,13 @@ struct SerialiseBillOfMaterials {
     std::uint32_t pit_screens_vertical{};
     std::uint32_t sand_stubbornness{};
     bool do_time_tick{};
-    // sounds?
-    // graphics?
+    // graphics
+    const bool* graphic_resource_was_animated{};   // Shallow copy.
+    const double* graphic_resource_refresh_period_s{};   // Shallow copy.
+	const char** graphic_resource_paths{};    // Shallow copy.
+    // sounds
+	const char** sound_resource_paths{};      // Shallow copy.
+	const char** soundstream_resource_paths{};      // Shallow copy.
     // entities
     NEEDS_FREE const Entity* game_entities{};                // Deepcopy. Preserves game order. Iterate using indicies, not internal list pointers.
     std::uint32_t num_entities{};
@@ -37,13 +42,26 @@ void Serialise_FillInBOMCopyGameEntities(SerialiseBillOfMaterials* out_bom, cons
     out_bom->num_entities = num_entities;
 }
 
-void Serialise_FillInBOM(SerialiseBillOfMaterials* out_bom, const SandGame* game) {
+void Serialise_FillInBOM(
+    SerialiseBillOfMaterials* out_bom,
+    const SandGame* game,
+    DeserialiseMetadata* md
+) {
     // header
     AABB_GetCornerCoords(&game->player.bbox, AABB_TOP_LEFT, &out_bom->player_start_x, &out_bom->player_start_y);
     out_bom->pit_screens_horizontal = game->pit.num_screens_horizontal;
     out_bom->pit_screens_vertical = game->pit.num_screens_vertical;
     out_bom->sand_stubbornness = game->pit.stubbornness;
     out_bom->do_time_tick = game->do_time_tick;
+
+    if (md) {
+		// graphics & audio
+        out_bom->graphic_resource_paths = md->graphic_resource_paths;
+        out_bom->graphic_resource_was_animated = md->graphic_resource_was_animated;
+        out_bom->graphic_resource_refresh_period_s = md->animated_graphic_resource_refresh_period_s;
+        out_bom->sound_resource_paths = md->sound_resource_paths;
+        out_bom->soundstream_resource_paths = md->soundstream_resource_paths;
+	}
 
     // entities
     Serialise_FillInBOMCopyGameEntities(out_bom, game);
@@ -115,6 +133,49 @@ void Serialise_CopyStdStringToBuffer(
     *out_buffer_size = buffer.size();
 }
 
+void Serialise_SerialiseAudioResources(
+    const SerialiseBillOfMaterials* bom,
+    std::string& buffer
+) {
+    auto* sound_resources = bom->sound_resource_paths;
+    auto* soundstream_resources = bom->soundstream_resource_paths;
+
+    for (int i = 0; i < MAX_GRAPHIC_RESOURCES; i++) {
+        if (sound_resources[i] != nullptr) {
+            Serial_TrySerialiseStringRaw(SERIALISE_SOUND_DEFINITION_COMMAND , buffer);
+            Serial_TrySerialiseInteger(i, buffer);
+            Serial_TrySerialiseStringLiteral(sound_resources[i], buffer);
+            Serial_TryNewline(buffer);
+        }
+        else if (soundstream_resources[i] != nullptr) {
+            Serial_TrySerialiseStringRaw(SERIALISE_STREAM_DEFINITION_COMMAND , buffer);
+            Serial_TrySerialiseInteger(i, buffer);
+            Serial_TrySerialiseStringLiteral(soundstream_resources[i], buffer);
+            Serial_TryNewline(buffer);
+        }
+    }
+}
+
+void Serialise_SerialiseGraphicResources(
+    const SerialiseBillOfMaterials* bom,
+    std::string& buffer 
+) {
+    auto* graphic_resources = bom->graphic_resource_paths;
+    auto* was_animated = bom->graphic_resource_was_animated;
+    auto* refresh_period_s = bom->graphic_resource_refresh_period_s;
+
+    for (int i = 0; i < MAX_GRAPHIC_RESOURCES; i++) {
+        if (graphic_resources[i] != nullptr) {
+            Serial_TrySerialiseStringRaw(SERIALISE_GRAPHIC_DEFINITION_COMMAND, buffer);
+            Serial_TrySerialiseInteger(i, buffer);
+            Serial_TrySerialiseStringLiteral(graphic_resources[i], buffer);
+            if (was_animated[i])
+                Serial_TrySerialiseDouble(refresh_period_s[i], buffer);
+            Serial_TryNewline(buffer);
+        }
+    }
+}
+
 void Serialise_SerialiseBOM(
     const SerialiseBillOfMaterials* bom, 
     NEEDS_FREE char** out_buffer, 
@@ -123,18 +184,46 @@ void Serialise_SerialiseBOM(
     std::string buffer{};
 
     Serialise_SerialiseHeader(bom, buffer);
+    Serialise_SerialiseGraphicResources(bom, buffer);
+    Serialise_SerialiseAudioResources(bom, buffer);
     Serialise_SerialiseEntities(bom, buffer);
     Serialise_CopyStdStringToBuffer(buffer, out_buffer, out_buffer_size);
 }
 
 bool Serialise_SerialiseGame(
-    const SandGame* game, 
+    const SandGame* game,
     NEEDS_FREE char** out_buffer,
-    std::uint32_t* out_buffer_size
+    std::uint32_t* out_buffer_size,
+    DeserialiseMetadata* md
 ) {
     SerialiseBillOfMaterials bom{};
-    Serialise_FillInBOM(&bom, game);
+    Serialise_FillInBOM(&bom, game, md);
     Serialise_SerialiseBOM(&bom, out_buffer, out_buffer_size);
 
     return true;
 }
+
+bool Serialise_OpenAndWriteToFile(const char* file_path, const char* buffer, std::uint32_t buffer_size) {
+    FILE* f = nullptr;
+    fopen_s(&f, file_path, "wb");
+    if (!f)
+        return false;
+
+    auto written = fwrite(buffer, sizeof(char), buffer_size, f);
+    fclose(f);
+
+    return (written == buffer_size);
+}
+
+bool Serialise_SerialiseGameAndDumpToFile(const SandGame* game, const char* file_path, DeserialiseMetadata* md) {
+    char* serial_buffer = nullptr;
+    auto serial_buffer_size = 0u;
+    auto result = Serialise_SerialiseGame(game, &serial_buffer, &serial_buffer_size, md);
+    if (!result)
+        return false;
+
+    result = Serialise_OpenAndWriteToFile(file_path, serial_buffer, serial_buffer_size);
+    free(serial_buffer);
+    return result;
+}
+

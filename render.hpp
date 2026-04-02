@@ -1,6 +1,7 @@
 #pragma once
 #include "raylib.h"
 #include "game.hpp"
+#include "edit.hpp"
 
 struct RenderData {
 	EngineRenderData engine{};
@@ -14,5 +15,8 @@ struct RenderData {
 // TODO: pass global constants as arguments
 void Render_Init(RenderData* data, std::uint32_t window_w, std::uint32_t window_h, std::uint8_t fps, const char* window_name, GraphicResource skybox);
 void Render_Shutdown(RenderData* data);
+void Render_Begin(RenderData* data);
 void Render_RenderGame(RenderData* data, SandGame* game, EngineTime dt);
+void Render_RenderEditMode(RenderData* data, EditModeData* edit, EngineTime dt);
+void Render_End(RenderData* data, RenderFXFlags* flags, EngineTime dt);
 bool Render_ShouldGameClose(const RenderData* data);

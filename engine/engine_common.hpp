@@ -5,8 +5,8 @@
 struct AABB {
 	double top_left_x{};
 	double top_left_y{};
-	double half_w{};
-	double half_h{};
+	double w{};
+	double h{};
 };
 enum AABBCorner {
 	AABB_TOP_LEFT,

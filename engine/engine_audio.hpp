@@ -5,7 +5,7 @@
 using SoundFXFlags = std::uint32_t;
 using SoundFXFlag = std::uint32_t;
 using AudioResource = int;
-constexpr auto MAX_SOUNDS = 64;
+constexpr auto MAX_AUDIO_RESOURCES = 64;
 constexpr SoundFXFlags NULL_SFX_FLAGS = 0;
 
 struct AudioResourceStream {
@@ -33,14 +33,14 @@ struct SoundOpt {
 };
 
 struct EngineAudioData {
-	SoundOpt sounds[MAX_SOUNDS]{};
+	SoundOpt sounds[MAX_AUDIO_RESOURCES]{};
 	SoundFXFlags prev_sfx = NULL_SFX_FLAGS;
 };
 
 SoundFXFlag SoundFXFlag_FromResource(AudioResource rsc);
 bool SoundFXFlags_Get(SoundFXFlags flags, SoundFXFlag flag);
 void SoundFXFlags_Set(SoundFXFlags* flags, SoundFXFlag flag, bool to=true);
-const auto MAX_SFX_FLAG = SoundFXFlag_FromResource((MAX_SOUNDS - 1));
+const auto MAX_SFX_FLAG = SoundFXFlag_FromResource((MAX_AUDIO_RESOURCES - 1));
 
 void EngineAudio_Init(EngineAudioData* audio);
 void EngineAudio_Shutdown(EngineAudioData* audio);

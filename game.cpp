@@ -13,7 +13,7 @@ int PlaceSandCircle(SandPit* p, std::int32_t x, std::int32_t y, std::int32_t r, 
 	for (auto i_x = -r; i_x < r; i_x++) {
 		for (auto i_y = -r; i_y < r; i_y++) {
 			if (i_x * i_x + i_y * i_y < r * r) {
-				if (SandPit_PlaceGrain(p, x + i_x, y + i_y, PseudoRandom_GetU32() & 0b11));
+				if (SandPit_PlaceGrain(p, x + i_x, y + i_y, PseudoRandom_GetU32() & 0b11))
 					++num_placed;
 			}
 		}
@@ -372,6 +372,7 @@ void SandGame_Create(SandGame* game, double player_x, double player_y, double pl
 	game->sfx_flags = NULL_SFX_FLAGS;
 	game->action_flags_pressed = NULL_ACTION_FLAGS;
 	game->action_flags_held = NULL_ACTION_FLAGS;
+	game->new_level_path = nullptr;
 
 	if (persistent == nullptr) {
 		game->persistent = (SandGamePersistentState*)malloc(sizeof(SandGamePersistentState));
@@ -397,6 +398,13 @@ void SandGame_Destroy(SandGame* game) {
 	SandGame_DestroyEntityList(game);
 }
 
+void SandGame_ReceiveInput(SandGame* game, GameActionFlags* pressed, GameActionFlags* held, int cursor_x, int cursor_y) {
+	game->action_flags_pressed = *pressed;
+	game->action_flags_held = *held;
+	game->cursor_x = cursor_x;
+	game->cursor_y = cursor_y;
+}
+
 void UpdateSandPit(
 	SandPit* pit, 
 	bool place_button, 
@@ -411,6 +419,7 @@ void UpdateSandPit(
 
 // Returns true if we should skip this frame
 bool SandGame_NewUpdate(SandGame* game) {
+	game->toast = nullptr;
 	game->skip_frame = std::max(0, game->skip_frame - 1);
 	return game->skip_frame > 0;
 }
@@ -447,14 +456,24 @@ void SandGame_HandleTimeElapse(SandGame* game, double dt_s) {
 		game->persistent->elapsed_s += dt_s;
 }
 
-void SandGame_Update(SandGame* game, EngineTime dt) {
+void SandGame_CommitInputFlags(SandGame* game, GameActionFlags* pressed, GameActionFlags* held) {
+	*pressed = game->action_flags_pressed;
+	*held = game->action_flags_held;
+}
+
+void SandGame_Update(SandGame* game, GameActionFlags* pressed, GameActionFlags* held, int cursor_x, int cursor_y, EngineTime dt) {
 	auto dt_s = dt.seconds;
-	std::uint32_t sector_x;
-	std::uint32_t sector_y;
+	std::uint32_t sector_x = 0;
+	std::uint32_t sector_y = 0;
 	double player_x_sand = 0;
 	double player_y_sand = 0;
 	double player_x = 0;
 	double player_y = 0;
+	double player_w = 0;
+	double player_h = 0;
+	auto mouse_x = 0;
+	auto mouse_y = 0;
+	AABB player_bbox;
 
 	auto first_frame = SandGame_NewUpdate(game);
 	SandGame_HandleFreeze(game, dt_s);
@@ -463,18 +482,14 @@ void SandGame_Update(SandGame* game, EngineTime dt) {
 	if (SandGame_IsFrozen(game) || first_frame)
 		return;
 
-	AABB player_bbox = game->player.bbox;
-	double player_w = AABB_GetWidth(&player_bbox);
-	double player_h = AABB_GetHeight(&player_bbox);
+	player_bbox = game->player.bbox;						// We make a copy since we are going to scale it.
+	player_w = AABB_GetWidth(&player_bbox);
+	player_h = AABB_GetHeight(&player_bbox);
 	AABB_GetCornerCoords(&player_bbox, AABB_BOTTOM, &player_x, &player_y);		
 	AABB_ScaleByReciprocal(&player_bbox, game->pit.grain_size);					// Convert to sand coordinates
 	AABB_GetCornerCoords(&player_bbox, AABB_BOTTOM, &player_x_sand, &player_y_sand);		
-
 	SandPit_WorldCoordsToSectorCoords(&game->pit, player_x_sand, player_y_sand, &sector_x, &sector_y);
-	auto start_x = ((int)player_x / WINDOW_WIDTH) * WINDOW_WIDTH;
-	auto start_y = ((int)player_y / WINDOW_HEIGHT) * WINDOW_HEIGHT;
-	auto mouse_x = game->cursor_x + start_x;
-	auto mouse_y = game->cursor_y + start_y;
+	SandGame_ScreenCoordsToWorldCoords(game, game->cursor_x, game->cursor_y, &mouse_x, &mouse_y);
 
 	UpdateSandPit(
 		&game->pit,
@@ -499,6 +514,20 @@ void SandGame_Update(SandGame* game, EngineTime dt) {
 		dt_s
 	);
 	SandGame_ThinkEntities(game, dt_s);
+	SandGame_CommitInputFlags(game, pressed, held);
+}
+
+void SandGame_ScreenCoordsToWorldCoords(const SandGame* game, int screen_x, int screen_y, int* out_world_x, int* out_world_y) {
+	auto player_x = 0.0;
+	auto player_y = 0.0;
+	auto start_x = 0;
+	auto start_y = 0;
+	auto player_bbox = game->player.bbox;						// We make a copy since we are going to scale it.
+	AABB_GetCornerCoords(&game->player.bbox, AABB_BOTTOM, &player_x, &player_y);		
+	start_x = (static_cast<int>(player_x) / static_cast<int>(WINDOW_WIDTH)) * static_cast<int>(WINDOW_WIDTH);			// FIXME: Move constants to instance variable...  auto start_y = ((int)player_y / WINDOW_HEIGHT) * WINDOW_HEIGHT;
+	start_y = (static_cast<int>(player_y) / static_cast<int>(WINDOW_HEIGHT)) * static_cast<int>(WINDOW_HEIGHT);			// FIXME: Move constants to instance variable...  auto start_y = ((int)player_y / WINDOW_HEIGHT) * WINDOW_HEIGHT;
+	*out_world_x = screen_x + start_x;
+	*out_world_y = screen_y + start_y;
 }
 
 Entity* SandGame_AddEntity(SandGame* game, void* entity, EntityType type) {
@@ -590,7 +619,6 @@ void SandGame_SetFXFlag(SandGame* game, RenderFXFlag fx) {
 
 void SandGame_SetToast(SandGame* game, const char* toast, bool do_sound) {
 	game->toast = toast;
-	SandGame_SetFXFlag(game, FX_REFRESH_TOAST);
 	if (do_sound) SandGame_SetSFXFlag(game, SFX_TOAST_NOTIFY);
 }
 
@@ -598,16 +626,16 @@ void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, 
 	rect->vtable = {
 		RectangleObstacle_Place,
 		RectangleObstacle_Remove,
-		RectangleObstacle_Think
+		RectangleObstacle_Think,
+		RectangleObstacle_GetAABB
 	};
 	AABB_Create(&rect->aabb, top_left_x, top_left_y, w, h);
 	rect->colour = colour;
-	rect->has_graphic = false;
+	rect->graphic = -1;
 }
 
 void RectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, double w, double h, const GameColour colour, GraphicResource graphic) {
 	RectangleObstacle_Create(rect, top_left_x, top_left_y, w, h, colour);
-	rect->has_graphic = graphic >= 0;
 	rect->graphic = graphic;
 }
 
@@ -627,30 +655,36 @@ void RectangleObstacle_Think(Entity* rect, SandGame* game, double dt) {
 	// pass
 }
 
+AABB* RectangleObstacle_GetAABB(Entity* ent) {
+	auto* rect = &ent->entity.rect;
+	return &rect->aabb;
+}
+
 void HintBox_Create(EntityHintBox* box, const char* message, bool only_once, double top_left_x, double top_left_y, double w, double h) {
 	box->vtable = {
 		HintBox_Place,
 		HintBox_Remove,
-		HintBox_Think
+		HintBox_Think,
+		HintBox_GetAABB
 	};
 	AABB_Create(&box->aabb, top_left_x, top_left_y, w, h);
 	box->message = message;
 	box->already_triggered = false;
 	box->only_once = only_once;
-	box->has_sound = false;
+	box->audio_rsc = -1;
 }
 
 void HintBox_Create(EntityHintBox* box, const char* message, bool only_once, double top_left_x, double top_left_y, double w, double h, AudioResource rsc) {
 	box->vtable = {
 		HintBox_Place,
 		HintBox_Remove,
-		HintBox_Think
+		HintBox_Think,
+		HintBox_GetAABB
 	};
 	AABB_Create(&box->aabb, top_left_x, top_left_y, w, h);
 	box->message = message;
 	box->already_triggered = false;
 	box->only_once = only_once;
-	box->has_sound = true;
 	box->audio_rsc = rsc;
 }
 
@@ -663,7 +697,7 @@ void HintBox_Remove(Entity* box, SandGame* game) {
 }
 
 bool HintBox_HasAudio(const EntityHintBox* box) {
-	return box->has_sound;
+	return box->audio_rsc > -1;
 }
 
 void HintBox_OnTrigger(EntityHintBox* box, SandGame* game) {
@@ -683,17 +717,23 @@ void HintBox_Think(Entity* e, SandGame* game, double dt) {
 	if (!intersects_player && !box->only_once) {	// Setup hint for another trigger
 		box->already_triggered = false;
 	}
+	// TODO: destroy
+}
+
+AABB* HintBox_GetAABB(Entity* e) {
+	auto* box = &e->entity.hint_box;
+	return &box->aabb;
 }
 
 void Barrel_Create(EntityBarrel* barrel, double top_left_x, double bottom_y, double w, double h, GraphicResource idle_sprite, GraphicResource explode_sprite) {
 	barrel->vtable = {
 		Barrel_Place,
 		Barrel_Remove,
-		Barrel_Think
+		Barrel_Think,
+		Barrel_GetAABB
 	};
 	auto top_left_y = bottom_y + h;
 	AABB_Create(&barrel->aabb, top_left_x, top_left_y, w, h);
-	AABB_Create(&barrel->sight_aabb, top_left_x, WINDOW_HEIGHT, w, WINDOW_HEIGHT);			// FIXME
 	barrel->idle_sprite = idle_sprite;
 	barrel->explode_sprite = explode_sprite;
 	barrel->active_sprite = idle_sprite;
@@ -732,6 +772,14 @@ void Barrel_LightFuse(EntityBarrel* barrel, SandGame* game) {
 	SandGame_SetSFXFlag(game, SFX_FUSE);
 }
 
+// Lame workaround since we really need to introduce a new entity virtual fn to 
+// notify it of movement so it can update members. 
+void Barrel_RefreshSightAABB(EntityBarrel* barrel) {
+	auto w = AABB_GetWidth(&barrel->aabb);
+	auto h = AABB_GetHeight(&barrel->aabb);
+	AABB_Create(&barrel->sight_aabb, barrel->aabb.top_left_x, WINDOW_HEIGHT, w, WINDOW_HEIGHT - (barrel->aabb.top_left_y - h));			// FIXME
+}
+
 void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 	auto* barrel = &ent->entity.barrel;
 	barrel->sprite_changed = false;
@@ -758,6 +806,7 @@ void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 		}
 	}
 	else {
+		Barrel_RefreshSightAABB(barrel);
 		// Ignite check
 		if (AABB_Intersects(&barrel->sight_aabb, &game->player.bbox)) {
 			Barrel_LightFuse(barrel, game);
@@ -765,11 +814,17 @@ void Barrel_Think(Entity* ent, SandGame* game, double dt) {
 	}
 }
 
+AABB* Barrel_GetAABB(Entity* ent) {
+	auto* barrel = &ent->entity.barrel;
+	return &barrel->aabb;
+}
+
 void LevelDoor_Create(EntityLevelDoor* door, double top_left_x, double top_left_y, double w, double h, const char* next_level_path, int lock_flag, int unlock_flag) {
 	door->vtable = {
 		LevelDoor_Place,
 		LevelDoor_Remove,
-		LevelDoor_Think
+		LevelDoor_Think,
+		LevelDoor_GetAABB
 	};
 	AABB_Create(&door->aabb, top_left_x, top_left_y, w, h);
 	door->next_level_path = next_level_path;
@@ -791,6 +846,11 @@ bool LevelDoor_IsUnlocked(EntityLevelDoor* door, const SandGame* game) {
 	if (LevelDoor_HasLock(door))
 		return SandGame_IsLockFlagUnLocked(game, door->lock_flag);
 	return true;
+}
+
+AABB* LevelDoor_GetAABB(Entity* ent) {
+	auto* door = &ent->entity.door;
+	return &door->aabb;
 }
 
 bool LevelDoor_UnlocksAnother(EntityLevelDoor* door) {
@@ -829,7 +889,8 @@ void Ladybird_Create(EntityLadybird* ladybird, double x, double y) {
 	ladybird->vtable = {
 		Ladybird_Place,
 		Ladybird_Remove,
-		Ladybird_Think
+		Ladybird_Think,
+		Ladybird_GetAABB
 	};
 	AABB_Create(&ladybird->aabb, x, y + LADYBIRD_HEIGHT, LADYBIRD_WIDTH, LADYBIRD_HEIGHT);
 	ladybird->time_until_move = LADYBIRD_MOVE_TRY_DELAY_S;
@@ -973,6 +1034,11 @@ void Ladybird_Think(Entity* ent, SandGame* game, double dt_s) {
 	}
 }
 
+AABB* Ladybird_GetAABB(Entity* ent){
+	auto* ladybird = &ent->entity.ladybird;
+	return &ladybird->aabb;
+}
+
 Entity Entity_CreateFrom(void* instance, EntityType type)
 {
 	Entity result{};
@@ -999,6 +1065,10 @@ void Entity_Remove(Entity* _this, SandGame* pit) {
 
 void Entity_Think(Entity* _this, SandGame* game, double dt) {
 	_this->entity.vtable.think_fn(_this, game, dt);
+}
+
+AABB* Entity_GetAABB(Entity* _this) {
+	return _this->entity.vtable.get_aabb_fn(_this);
 }
 
 void TexturedRectangleObstacle_Create(EntityRectangleObstacle* rect, double top_left_x, double top_left_y, GraphicResource texture) {

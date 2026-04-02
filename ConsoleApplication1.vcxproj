@@ -146,12 +146,13 @@
   <ItemGroup>
     <ClCompile Include="common.cpp" />
     <ClCompile Include="deserialise.cpp" />
+    <ClCompile Include="edit.cpp" />
+    <ClCompile Include="edit.cpp" />
     <ClCompile Include="engine\engine_audio.cpp" />
     <ClCompile Include="engine\engine_common.cpp" />
     <ClCompile Include="engine\engine_render.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="engine\engine_input.cpp" />
-    <ClCompile Include="level.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="render.cpp" />
     <ClCompile Include="sand_sim.cpp" />
@@ -161,13 +162,14 @@
   <ItemGroup>
     <ClInclude Include="common.hpp" />
     <ClInclude Include="deserialise.hpp" />
+    <ClInclude Include="edit.hpp" />
+    <ClInclude Include="edit.hpp" />
     <ClInclude Include="engine\engine.hpp" />
     <ClInclude Include="engine\engine_audio.hpp" />
     <ClInclude Include="engine\engine_common.hpp" />
     <ClInclude Include="engine\engine_render.hpp" />
     <ClInclude Include="game.hpp" />
     <ClInclude Include="engine\engine_input.hpp" />
-    <ClInclude Include="level.hpp" />
     <ClInclude Include="render.hpp" />
     <ClInclude Include="resource.hpp" />
     <ClInclude Include="sand_sim.hpp" />
@@ -178,6 +180,7 @@
     <None Include=".gitignore" />
     <None Include="levels\lvl0.sg" />
     <None Include="levels\lvl1.sg" />
+    <None Include="levels\lvl_dump.sg" />
     <None Include="levels\lvl_empty.sg" />
     <None Include="levels\lvl_inter.sg" />
   </ItemGroup>

@@ -106,7 +106,7 @@ void Serial_SerialiseRectangleObstacle(
     w = AABB_GetWidth(&rect->aabb);
     h = AABB_GetHeight(&rect->aabb);
     c = rect->colour;
-    rsc = (rect->has_graphic) ? rect->graphic : -1;
+    rsc = rect->graphic;
     
     Serial_TrySerialiseDouble(top_left_x, out_serial);
     Serial_TrySerialiseDouble(top_left_y, out_serial);

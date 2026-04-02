@@ -577,6 +577,10 @@ void EngineRender_DrawTextAbsolute(const EngineRenderData* data, const char* tex
 	DrawText(text, x, y, font_size, raylib_color);
 }
 
+double EngineRender_MeasureTextWidth(const EngineRenderData* data, const char* text, float font_size) {
+	return MeasureText(text, font_size);
+}
+
 void EngineRender_DrawText(const EngineRenderData* data, const char* text, float x, float y, float font_size, const GameColour* colour) {
 	double origin_x;
 	double origin_y;
@@ -595,6 +599,20 @@ void EngineRender_DrawRectangle(const EngineRenderData* data, float x, float y, 
 	double origin_y;
 	EngineRender_GetCameraOrigin(data, &origin_x, &origin_y);
 	EngineRender_DrawRectangleAbsolute(data, x - origin_x, y - origin_y, w, h, colour);
+}
+
+void EngineRender_DrawRectangleOutlineAbsolute(const EngineRenderData* data, float x, float y, float w, float h, float thickness, const GameColour* colour) {
+	Rectangle rect{x, y, w, h};
+	Color raylib_color;
+	GameColourToRaylibColor(colour, &raylib_color);
+	DrawRectangleLinesEx(rect, thickness, raylib_color);
+}
+
+void EngineRender_DrawRectangleOutline(const EngineRenderData* data, float x, float y, float w, float h, float thickness, const GameColour* colour) {
+	double origin_x;
+	double origin_y;
+	EngineRender_GetCameraOrigin(data, &origin_x, &origin_y);
+	EngineRender_DrawRectangleOutlineAbsolute(data, x - origin_x, y - origin_y, w, h, thickness, colour);
 }
 
 void EngineRender_DrawAABBAbsolute(const EngineRenderData* data, const AABB* aabb, const GameColour* colour) {
@@ -616,6 +634,30 @@ void EngineRender_DrawAABB(const EngineRenderData* data, const AABB* aabb, const
 	AABB_GetCornerCoords(aabb, AABB_TOP_LEFT, &x, &y);
 	EngineRender_GetCameraOrigin(data, &origin_x, &origin_y);
 	EngineRender_DrawRectangleAbsolute(data, x - origin_x, y - origin_y, w, h, colour);
+}
+
+void EngineRender_DrawAABBOutlineAbsolute(const EngineRenderData* data, const AABB* aabb, float thickness, const GameColour* colour) {
+	double w = AABB_GetWidth(aabb);
+	double h = AABB_GetHeight(aabb);
+	Rectangle rect{ aabb->top_left_x, aabb->top_left_y, w, h };
+	Color raylib_color;
+	GameColourToRaylibColor(colour, &raylib_color);
+	DrawRectangleLinesEx(rect, thickness, raylib_color);
+}
+
+void EngineRender_DrawAABBOutline(const EngineRenderData* data, const AABB* aabb, float thickness, const GameColour* colour){
+	double origin_x;
+	double origin_y;
+	Color raylib_color;
+	double w = AABB_GetWidth(aabb);
+	double h = AABB_GetHeight(aabb);
+	Rectangle rect{ aabb->top_left_x, aabb->top_left_y, w, h };
+	GameColourToRaylibColor(colour, &raylib_color);
+	DrawRectangleLinesEx(rect, thickness, raylib_color);
+	EngineRender_GetCameraOrigin(data, &origin_x, &origin_y);
+	rect.x -= origin_x;
+	rect.y -= origin_y;
+	DrawRectangleLinesEx(rect, thickness, raylib_color);
 }
 
 void EngineBackground_Draw(EngineRenderData* r, const EngineBackground* bg, float dt_s) {

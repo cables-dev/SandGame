@@ -70,7 +70,7 @@ struct SandGame {
 	Entity* entities_top = nullptr;					// Knuth-style fixed-width free-store
 	Entity* entities_avail = nullptr;
 	std::uint32_t max_entities;
-	const char* toast = "";
+	const char* toast = nullptr;
 	NEEDS_FREE const char* level_buffer = nullptr;  // The currently loaded level file. Must be kept alive so entities can reference internal strings like string toast messages. 
 	const char* new_level_path = nullptr;
 	bool do_time_tick = true;
@@ -96,7 +96,28 @@ void SandGame_Create(
 );
 void SandGame_Destroy(SandGame* game, SandGamePersistentState** out_persistent_state);
 void SandGame_Destroy(SandGame* game);
-void SandGame_Update(SandGame* game, EngineTime dt);
+void SandGame_ReceiveInput(
+	SandGame* game,
+	GameActionFlags* pressed,
+	GameActionFlags* held,
+	int cursor_x,
+	int cursor_y 
+);
+void SandGame_Update(
+	SandGame* game, 
+	GameActionFlags* pressed, 
+	GameActionFlags* held, 
+	int cursor_x, 
+	int cursor_y, 
+	EngineTime dt
+);
+void SandGame_ScreenCoordsToWorldCoords(
+	const SandGame* game,
+	int screen_x,
+	int screen_y,
+	int* out_world_x,
+	int* out_world_y
+);
 Entity* SandGame_AddEntity(SandGame* game, void* entity, EntityType type);		// "entity" will be copied into a local buffer.
 void SandGame_RemoveEntity(SandGame* game, Entity* entity);
 void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb);
@@ -118,10 +139,12 @@ int SandGame_GetNumEntities(const SandGame* game);
 using EntityPlaceFn_t = void(*)(Entity* _this, SandGame* game);
 using EntityRemoveFn_t = void(*)(Entity* _this, SandGame* game);
 using EntityThinkFn_t = void(*)(Entity* _this, SandGame* game, double dt);
+using EntityGetAABBFn_t = AABB*(*)(Entity* _this);
 struct EntityVTable {						// Each new entity must have this as their first member.
 	EntityPlaceFn_t place_fn;
 	EntityRemoveFn_t remove_fn;
 	EntityThinkFn_t think_fn;
+	EntityGetAABBFn_t get_aabb_fn;
 };
 
 // ======== ENTITIES ======== 
@@ -129,7 +152,6 @@ struct EntityRectangleObstacle {
 	EntityVTable vtable;						// !Important 
 	AABB aabb{};
 	GameColour colour{};
-	bool has_graphic{};
 	GraphicResource graphic{};
 };
 void RectangleObstacle_Create(
@@ -152,6 +174,7 @@ void RectangleObstacle_Create(
 void RectangleObstacle_Place(Entity* rect, SandGame* game);
 void RectangleObstacle_Remove(Entity* rect, SandGame* game);
 void RectangleObstacle_Think(Entity* rect, SandGame* game, double dt);
+AABB* RectangleObstacle_GetAABB(Entity* rect);
 
 struct EntityHintBox {
 	EntityVTable vtable;						// !Important 
@@ -159,7 +182,6 @@ struct EntityHintBox {
 	const char* message{};
 	bool already_triggered{};
 	bool only_once{};
-	bool has_sound{};
 	AudioResource audio_rsc{};
 };
 void HintBox_Create(
@@ -184,6 +206,7 @@ void HintBox_Create(
 void HintBox_Place(Entity* rect, SandGame* game);
 void HintBox_Remove(Entity* rect, SandGame* game);
 void HintBox_Think(Entity* rect, SandGame* game, double dt);
+AABB* HintBox_GetAABB(Entity* rect);
 
 struct EntityBarrel {
 	EntityVTable vtable;						// !Important 
@@ -208,6 +231,7 @@ void Barrel_Create(
 void Barrel_Place(Entity* rect, SandGame* game);
 void Barrel_Remove(Entity* rect, SandGame* game);
 void Barrel_Think(Entity* rect, SandGame* game, double dt);
+AABB* Barrel_GetAABB(Entity* rect);
 
 struct EntityLevelDoor {
 	EntityVTable vtable;						// !Important 
@@ -230,6 +254,7 @@ void LevelDoor_Remove(Entity* ent, SandGame* game);
 void LevelDoor_Think(Entity* ent, SandGame* game, double dt);
 bool LevelDoor_HasLock(EntityLevelDoor* door);
 bool LevelDoor_IsUnlocked(EntityLevelDoor* door, const SandGame* game);
+AABB* LevelDoor_GetAABB(Entity* door);
 
 constexpr auto LADYBIRD_WIDTH = 15;
 constexpr auto LADYBIRD_HEIGHT = 7;
@@ -261,6 +286,7 @@ void Ladybird_GetFeet(const EntityLadybird* ladybird, double* out_x, double* out
 void Ladybird_Place(Entity* ent, SandGame* game);
 void Ladybird_Remove(Entity* ent, SandGame* game);
 void Ladybird_Think(Entity* ent, SandGame* game, double dt);
+AABB* Ladybird_GetAABB(Entity* ent);
 // ======== ENTITIES ======== 
 
 
@@ -288,11 +314,12 @@ struct Entity {
 	Entity* _next{};
 	Entity* _prev{};
 };
+
 Entity Entity_CreateFrom(void* instance, EntityType type);		
 void Entity_Place(Entity* _this, SandGame* game);
 void Entity_Remove(Entity* _this, SandGame* game);
 void Entity_Think(Entity* _this, SandGame* game, double dt);
-
+AABB* Entity_GetAABB(Entity* _this);
 
 // ======= PLAYER ======= 
 EntityDirection Player_GetDirection(const Player* player);

@@ -11,6 +11,15 @@ constexpr auto WHITE_COLOUR = GameColour{ 0xffffffff };
 constexpr auto TIMER_READOUT_FONT_COLOUR = WHITE_COLOUR;
 constexpr auto TIME_READOUT_FONT_SIZE = 30;
 constexpr auto TIME_READOUT_X_OFFSET = 148;
+constexpr auto EDIT_MODE_CURSOR_POS_FONT_COLOUR = GameColour{ 0xafaff7ff };
+constexpr auto EDIT_MODE_ENTITY_OUTLINE_COLOUR = GameColour{ 0xbf2f5fff };
+constexpr auto EDIT_MODE_CURSOR_POS_FONT_SIZE = 20;
+constexpr auto EDIT_MODE_CURSOR_POS_X_OFFSET = 10;
+constexpr auto EDIT_MODE_CURSOR_POS_Y_OFFSET = -EDIT_MODE_CURSOR_POS_FONT_SIZE - 10;
+constexpr auto EDIT_MODE_VARIABLE_FONT_SIZE = 20;
+constexpr auto EDIT_MODE_VARIABLE_TEXT_Y_OFFSET = 10;
+constexpr auto EDIT_MODE_VARIABLE_FONT_COLOUR = WHITE_COLOUR;
+constexpr auto EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR = GameColour{ 0xbf2f5fff };
 
 constexpr Color PARTICLE_COLOURS[]{
 	Color{243, 227, 124, 255},
@@ -25,10 +34,6 @@ constexpr Color PARTICLE_COLOURS[]{
 //	Color{184, 17, 17, 255},
 //	Color{250, 69, 69, 255}
 //};
-void WorldToScreen(double x, double y, double* out_x, double* out_y) {
-	*out_x = x;
-	*out_y = WINDOW_HEIGHT - y;
-}
 
 void RenderRectangleObstacle(RenderData* data, const EntityRectangleObstacle* rect, float dt_s) {
 	double top_left_x_w = 0;
@@ -47,7 +52,7 @@ void RenderRectangleObstacle(RenderData* data, const EntityRectangleObstacle* re
 
 	auto w = bottom_right_x - top_left_x;
 	auto h = bottom_right_y - top_left_y;
-	if (!rect->has_graphic)
+	if (rect->graphic <= -1)
 		EngineRender_DrawRectangle(&data->engine, top_left_x, top_left_y, w, h, &rect->colour);
 	else
 		EngineRender_DrawGraphicResource(&data->engine, rect->graphic, top_left_x, top_left_y, &rect->colour, dt_s);
@@ -120,14 +125,14 @@ void RenderLadybird(RenderData* data, const EntityLadybird* ladybird, float dt_s
 	EngineRender_DrawGraphicResource(&data->engine, rsc, bottom_left_x, bottom_left_y - sprite_h, &WHITE_COLOUR, dt_s);
 }
 
-void RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
+void Render_RenderEntity(RenderData* renderer, const Entity* entity, float dt_s) {
 	switch (entity->type) {
 		case ENTITY_RECTANGLE: { RenderRectangleObstacle(renderer, &entity->entity.rect, dt_s); break; }
 		case ENTITY_HINT_BOX: { /* pass */ break; }
 		case ENTITY_BARREL: { RenderBarrel(renderer, &entity->entity.barrel, dt_s); break; }
 		case ENTITY_LEVEL_DOOR: { RenderLevelDoor(renderer, &entity->entity.door, dt_s); break; }
 		case ENTITY_LADYBIRD: { RenderLadybird(renderer, &entity->entity.ladybird, dt_s); break; }
-		default: { assert("RenderEntity: Unaccounted entity type encountered." && false); }
+		default: { assert("Render_RenderEntity: Unaccounted entity type encountered." && false); }
 	}
 }
 
@@ -137,7 +142,7 @@ void Render_RenderEntities(RenderData* renderer, const SandGame* game, float dt_
 	rr = renderer;
 	dt = dt_s;
 	auto cb = [](Entity* ent) {
-		RenderEntity(rr, ent, dt);
+		Render_RenderEntity(rr, ent, dt);
 	};
 	SandGame_ForEachEntity(game, cb);
 }
@@ -168,12 +173,13 @@ void Render_Shutdown(RenderData* renderer) {
 	EngineRender_Shutdown(&renderer->engine);
 }
 
-void BeginRendering() {
-	BeginDrawing();
+void Render_Begin(RenderData* data) {
+	EngineRender_Begin(&data->engine);
 }
 
-void EndRendering() {
-	EndDrawing();
+void Render_End(RenderData* data, RenderFXFlags* flags, EngineTime dt) {
+	EngineRender_Draw(&data->engine, flags, dt);
+	EngineRender_End();
 }
 
 void Render_RenderSand(const RenderData* r, const SandPit* pit) {
@@ -309,7 +315,8 @@ void Render_RenderTimer(RenderData* r, const SandGame* game) {
 }
 
 void Render_SetToast(RenderData* r, const SandGame* game, float dt_s) {
-	EngineRender_SetToast(&r->engine, game->toast);
+	if (game->toast != nullptr)
+		EngineRender_SetToast(&r->engine, game->toast);
 }
 
 void Render_RenderUI(RenderData* r, const SandGame* game, float dt_s) {
@@ -320,17 +327,168 @@ void Render_RenderUI(RenderData* r, const SandGame* game, float dt_s) {
 }
 
 void Render_RenderGame(RenderData* r, SandGame* game, EngineTime dt) {
-	EngineRender_Begin(&r->engine);
-
 	auto dt_s = dt.seconds;
 	Render_MoveCamera(r, game);
 	Render_RenderEntities(r, game, dt_s);
 	Render_RenderPlayer(r, &game->player, dt_s);
 	Render_RenderSand(r, &game->pit);
 	Render_RenderUI(r, game, dt_s);
-	EngineRender_Draw(&r->engine, &game->fx_flags, dt);
+}
 
-	EngineRender_End();
+void Render_RenderEditModeToast(RenderData* data, EditModeData* edit, EngineTime dt) {
+	if (edit->toast_text != nullptr)
+		EngineRender_SetToast(&data->engine, edit->toast_text);
+}
+
+void Render_RenderEditModeCursorText(RenderData* data, EditModeData* edit, EngineTime dt) {
+	auto* text = edit->cursor_pos_text;
+	auto font_size = EDIT_MODE_CURSOR_POS_FONT_SIZE;
+	auto cursor_x = edit->screen_cursor_x + EDIT_MODE_CURSOR_POS_X_OFFSET;
+	auto cursor_y = edit->screen_cursor_y + EDIT_MODE_CURSOR_POS_Y_OFFSET;
+	auto text_width = EngineRender_MeasureTextWidth(&data->engine, text, font_size);
+	auto x_offscreen = cursor_x + text_width > EngineRender_GetCameraWidth(&data->engine);		// assuming (cursor_x,cursor_y) is top-left
+	auto y_offscreen = cursor_y < font_size;		// assuming (cursor_x,cursor_y) is top-left
+
+	if (x_offscreen)
+		cursor_x -= text_width;
+	if (y_offscreen)
+		cursor_y += -EDIT_MODE_CURSOR_POS_Y_OFFSET;
+
+	EngineRender_DrawTextAbsolute(&data->engine, edit->cursor_pos_text, cursor_x, cursor_y, font_size, &EDIT_MODE_CURSOR_POS_FONT_COLOUR );
+}
+
+void Render_RenderEditModePrototypeEntity(RenderData* data, EditModeData* edit, EngineTime dt) {
+	Entity* proto;
+	const AABB* ent_aabb;
+	AABB w2s_ent_aabb;
+
+	if (!EditMode_GetPrototypeEntity(edit, &proto))
+		return;
+
+	ent_aabb = Entity_GetAABB(proto);
+	WorldToScreen(ent_aabb, &w2s_ent_aabb);
+	
+	Render_RenderEntity(data, proto, EngineTime_GetTotalSeconds(&dt));
+	EngineRender_DrawAABBOutline(&data->engine, &w2s_ent_aabb, 2, &EDIT_MODE_ENTITY_OUTLINE_COLOUR);
+}
+
+void Render_RenderEditModeVariableDouble(
+	RenderData* data, 
+	EditModeVariableDouble* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR ;
+	char snprintf_buffer[200];
+	snprintf(snprintf_buffer, 200, "%s %f", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableInteger(
+	RenderData* data, 
+	EditModeVariableInteger* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto colour = (is_selected) ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+	char snprintf_buffer[200];
+	snprintf(snprintf_buffer, 200, "%s %d", var->description, *var->item);
+
+	EngineRender_DrawTextAbsolute(&data->engine, snprintf_buffer, x, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+}
+
+void Render_RenderEditModeVariableColour(
+	RenderData* data, 
+	EditModeVariableColour* var, 
+	bool is_selected,
+	double x,
+	double y
+) {
+	GameColour colours[4]{
+		EDIT_MODE_VARIABLE_FONT_COLOUR,
+		EDIT_MODE_VARIABLE_FONT_COLOUR,
+		EDIT_MODE_VARIABLE_FONT_COLOUR,
+		EDIT_MODE_VARIABLE_FONT_COLOUR
+	};
+	GameColour colour;
+	std::uint8_t* channel;
+	int x_cursor;
+	char buffer[10];			// Each colour should only take up max 3 chars (max of 255)
+	if (is_selected) {
+		auto selected_idx = var->rgba_idx;
+		colours[selected_idx] = EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR;
+	}
+
+	// Draw parts
+	x_cursor = x;
+	EngineRender_DrawTextAbsolute(&data->engine, var->description, x_cursor, y, EDIT_MODE_VARIABLE_FONT_SIZE, &EDIT_MODE_VARIABLE_FONT_COLOUR);
+	x_cursor += EngineRender_MeasureTextWidth(&data->engine, var->description, EDIT_MODE_VARIABLE_FONT_SIZE) + 6;
+	for (int i = 0; i < 4; i++) {
+		memset(buffer, 0, 10);
+
+		colour = colours[i];
+		channel = EditModeVariableColour_GetSelectionAt(var, i);
+		snprintf(buffer, 10, "%d", *channel);
+		EngineRender_DrawTextAbsolute(&data->engine, buffer, x_cursor, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+		x_cursor += EngineRender_MeasureTextWidth(&data->engine, buffer, EDIT_MODE_VARIABLE_FONT_SIZE) + 6;
+	}
+}
+
+void Render_RenderEditModeVariable(
+	RenderData* data, 
+	EditModeVariable* var, 
+	bool is_selected, 
+	double* in_out_x, 
+	double* in_out_y
+) {
+	switch(var->type) {
+	case EDIT_MODE_VAR_DOUBLE: { Render_RenderEditModeVariableDouble(data, &var->var.var_double, is_selected, *in_out_x, *in_out_y); break; }
+	//case EDIT_MODE_VAR_U32: { memcpy_s(&var->var, sizeof(var->var), var, sizeof(EditModeVariableUnsignedInteger)); break; }
+	case EDIT_MODE_VAR_INT: { Render_RenderEditModeVariableInteger(data, &var->var.var_integer, is_selected, *in_out_x, *in_out_y); break; }
+	case EDIT_MODE_VAR_COLOUR: { Render_RenderEditModeVariableColour(data, &var->var.var_colour, is_selected, *in_out_x, *in_out_y); break; }
+	//case EDIT_MODE_VAR_BOOLEAN: {}
+	//case EDIT_MODE_VAR_GRAPHIC_RESOURCE: {}
+	//case EDIT_MODE_VAR_AUDIO_RESOURCE: {}
+	//case EDIT_MODE_VAR_STRING: {}
+	//default: {}
+	}
+
+	*in_out_y += EDIT_MODE_VARIABLE_FONT_SIZE + EDIT_MODE_VARIABLE_TEXT_Y_OFFSET;
+}
+
+void Render_RenderEditModeVariables(RenderData* data, EditModeData* edit, EngineTime dt) {
+	if (!EditMode_IsEntitySelected(edit))
+		return;
+
+	auto* vars_head = EditMode_GetSelectedEntityVariablesListHead(edit);
+	auto* selected_var = EditMode_GetSelectedEntityVariablesSelectedVariable(edit);
+	if (vars_head == nullptr || selected_var == nullptr)
+		return;
+	auto* var_node = vars_head;
+	double x = 60.0;
+	double y = 60.0;
+
+	auto* last_node = var_node;
+	do {
+		Render_RenderEditModeVariable(data, var_node, var_node == selected_var, &x, &y);
+		last_node = var_node;
+		var_node = var_node->next;
+	} while (last_node != var_node);
+}
+
+void Render_RenderEditMode(RenderData* data, EditModeData* edit, EngineTime dt) {
+	// We need to display toast text when edit mode is disabled, so we call this before the enabled check.
+	Render_RenderEditModeToast(data, edit, dt);
+
+	if (!EditMode_IsEnabled(edit))
+		return;
+
+	Render_RenderEditModePrototypeEntity(data, edit, dt);
+	Render_RenderEditModeCursorText(data, edit, dt);
+	Render_RenderEditModeVariables(data, edit, dt);
 }
 
 bool Render_ShouldGameClose(const RenderData* data) {

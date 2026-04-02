@@ -129,7 +129,7 @@ bool Audio_Update(EngineAudioData* data, AudioResource rsc) {
 }
 
 void Audio_FreeSounds(EngineAudioData* audio) {
-	for (int i = 0; i < MAX_SOUNDS; i++) {
+	for (int i = 0; i < MAX_AUDIO_RESOURCES; i++) {
 		SoundOpt_Free(&audio->sounds[i]);
 	}
 }
@@ -159,7 +159,7 @@ void EngineAudio_LoadAndSetStreamResource(EngineAudioData* audio, AudioResource 
 }
 
 bool EngineAudio_IsSoundResourceLoaded(EngineAudioData* audio, AudioResource rsc) {
-	if (rsc > MAX_SOUNDS)
+	if (rsc > MAX_AUDIO_RESOURCES)
 		return false;
 	auto* pigeonhole = &audio->sounds[rsc];
 	return SoundOpt_IsPresent(pigeonhole);
@@ -179,7 +179,7 @@ void EngineAudio_Play(EngineAudioData* audio, SoundFXFlags* sfx) {
 	SoundFXFlags edges = *sfx ^ audio->prev_sfx;
 	Audio_UpdateSFXHistory(audio, *sfx);
 
-	for (auto rsc_i = 0; rsc_i < MAX_SOUNDS; rsc_i++) {
+	for (auto rsc_i = 0; rsc_i < MAX_AUDIO_RESOURCES; rsc_i++) {
 		auto rsc = (AudioResource)rsc_i;
 		auto test_flag = SoundFXFlag_FromResource(rsc);
 

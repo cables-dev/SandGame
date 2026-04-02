@@ -27,12 +27,13 @@ bool SandGameLevelFile_OpenAndRead(const char* file_path, NEEDS_FREE char** out_
 
     fseek(file, 0, SEEK_END); 
 	auto file_size = ftell(file);
-    file_size += 1;                     // +1 for null terminator.
+    file_size += 2;                     // +2 for null terminators.
 	fseek(file, 0, SEEK_SET);
 
     auto* buffer = (char*)(malloc(file_size));
     fread(buffer, 1, file_size, file);
     buffer[file_size - 1] = '\0';          // null-terminate file (not done automatically by OS)
+    buffer[file_size - 2] = '\0';          // null-terminate file (not done automatically by OS)
     fclose(file);
 
     *out_buffer = buffer;
@@ -170,7 +171,7 @@ bool Level_HandleSoundDefinition(
 
 	EngineAudio_LoadAndSetSoundResource(audio, rsc, file_path);
     // Store path in metadata. No need to deepcopy under the lifetime guarantee of SandGame.
-    out_metadata->audio_resource_paths[rsc] = file_path;
+    out_metadata->sound_resource_paths[rsc] = file_path;
     return true;
 }
 
@@ -201,7 +202,7 @@ bool Level_HandleStreamDefinition(
 
 	EngineAudio_LoadAndSetStreamResource(audio, rsc, file_path);
     // Store path in metadata. No need to deepcopy under the lifetime guarantee of SandGame.
-    out_metadata->audio_resource_paths[rsc] = file_path;
+    out_metadata->soundstream_resource_paths[rsc] = file_path;
     return true;
 }
 
@@ -338,6 +339,8 @@ bool Level_HandleGraphicDefinition(
             return false;
         }
 
+        out_meta->animated_graphic_resource_refresh_period_s[rsc] = refresh_period_s;
+        out_meta->graphic_resource_was_animated[rsc] = true;
         EngineRender_LoadAndSetAnimationResource(&data->engine, rsc, refresh_period_s, file_path);
     }
     else {
@@ -423,21 +426,28 @@ bool Level_ProcessFile(
 ) {
 	StringChomper chomp;
     StringChomper_Create(&chomp, *in_out_file_buffer);
+	StringChomper_SkipWhitespace(&chomp);
 
     while (StringChomper_Peek(&chomp) != '\0') {
         char* command;
-        StringChomper_SkipWhitespace(&chomp);
         StringChomper_ReadString(&chomp, &command, nullptr);
 
         if (!Level_ProcessCommand(command, &chomp, audio, render, game, out_meta, out_error))
             return false;
+        StringChomper_SkipWhitespace(&chomp);
     }
 
     *in_out_file_buffer = StringChomper_GetPointer(&chomp);
     return true;
 }
 
-bool Level_DeserialiseFile(
+void Level_InitMetadata(
+	DeserialiseMetadata* out_data
+) {
+    memset(out_data, 0, sizeof(*out_data));
+}
+
+bool Level_LoadFile(
 	EngineAudioData* audio, 
 	RenderData* render, 
 	SandGame* game, 
@@ -452,12 +462,16 @@ bool Level_DeserialiseFile(
     auto stubbornness = 0u;
     auto do_tick = false;
     char* level_buffer_top;
+    char* level_buffer;
+
     if (!SandGameLevelFile_OpenAndRead(file_path, &level_buffer_top)) {
-        *out_error = DeserialiseError{ "Could not open file for reading!", nullptr };
+        *out_error = DeserialiseError{ "Could not open file for reading!", file_path };
         return false;
     }
-    char* level_buffer = level_buffer_top;
 
+    Level_InitMetadata(out_meta);
+
+    level_buffer = level_buffer_top;
     // Parse header for initialisation info
     if (!Level_ProcessFileHeader(&level_buffer, &player_x, &player_y, &pit_screens_horizontal, &pit_screens_vertical, &stubbornness, &do_tick, out_error)) {
         free(level_buffer_top);

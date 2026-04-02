@@ -178,3 +178,20 @@ bool StringChomper_ReadDouble(
     }
     return false;
 }
+
+void WorldToScreen(double x, double y, double* out_x, double* out_y) {
+	*out_x = x;
+	*out_y = WINDOW_HEIGHT - y;
+}
+
+void WorldToScreen(const AABB* aabb, AABB* out) {
+    *out = *aabb;
+    WorldToScreen(aabb->top_left_x, aabb->top_left_y, &out->top_left_x, &out->top_left_y);
+}
+
+void ScreenToWorld(double x, double y, double* out_x, double* out_y) {
+    // Symmetric
+    WorldToScreen(x, y, out_x, out_y);
+}
+
+

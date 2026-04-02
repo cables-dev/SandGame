@@ -908,7 +908,9 @@ void SandPit_ForEachGrain(
 }
 
 SandPitQueryResult SandPit_QueryRegion(const SandPit* pit, const AABB* aabb) {
-	return SandPit_QueryRegion(pit, aabb->top_left_x, aabb->top_left_y, 2.0 * aabb->half_w, 2.0 * aabb->half_h);
+	auto w = AABB_GetWidth(aabb);
+	auto h = AABB_GetWidth(aabb);
+	return SandPit_QueryRegion(pit, aabb->top_left_x, aabb->top_left_y, w, h);
 }
 
 SandPitQueryResult SandPit_QueryRegion(

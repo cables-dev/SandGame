@@ -159,6 +159,11 @@ void EngineRender_DrawTextAbsolute(
 	float font_size,
 	const GameColour* colour
 );
+double EngineRender_MeasureTextWidth(
+	const EngineRenderData* data,
+	const char* text,
+	float font_size
+);
 void EngineRender_DrawText(						// Camera-corrected
 	const EngineRenderData* data, 
 	const char* text,
@@ -183,6 +188,24 @@ void EngineRender_DrawRectangle(				// Camera-corrected
 	float h,
 	const GameColour* colour
 );
+void EngineRender_DrawRectangleOutlineAbsolute(
+	const EngineRenderData* data, 
+	float x,
+	float y,
+	float w,
+	float h,
+	float thickness,
+	const GameColour* colour
+);
+void EngineRender_DrawRectangleOutline(				// Camera-corrected
+	const EngineRenderData* data, 
+	float x,
+	float y,
+	float w,
+	float h,
+	float thickness,
+	const GameColour* colour
+);
 void EngineRender_DrawAABBAbsolute(
 	const EngineRenderData* data,
 	const AABB* aabb,
@@ -191,5 +214,17 @@ void EngineRender_DrawAABBAbsolute(
 void EngineRender_DrawAABB(				// Camera-corrected
 	const EngineRenderData* data,
 	const AABB* aabb,
+	const GameColour* colour
+);
+void EngineRender_DrawAABBOutlineAbsolute(
+	const EngineRenderData* data,
+	const AABB* aabb,
+	float thickness,
+	const GameColour* colour
+);
+void EngineRender_DrawAABBOutline(				// Camera-corrected
+	const EngineRenderData* data,
+	const AABB* aabb,
+	float thickness,
 	const GameColour* colour
 );

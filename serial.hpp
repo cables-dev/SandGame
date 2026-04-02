@@ -11,8 +11,11 @@ struct DeserialiseError {
 };
 
 struct DeserialiseMetadata {		// Store paths to resources since they are discarded once they are loaded into memory.
+	double animated_graphic_resource_refresh_period_s[MAX_GRAPHIC_RESOURCES]{};
+	bool graphic_resource_was_animated[MAX_GRAPHIC_RESOURCES]{};
 	const char* graphic_resource_paths[MAX_GRAPHIC_RESOURCES]{};	// Point into loaded file memory. Requires that file 
-	const char* audio_resource_paths[MAX_GRAPHIC_RESOURCES]{};		// contents are stored and kept alive in game->level_buffer.
+	const char* sound_resource_paths[MAX_AUDIO_RESOURCES]{};		// contents are stored and kept alive in game->level_buffer.
+	const char* soundstream_resource_paths[MAX_AUDIO_RESOURCES]{};	
 };
 
 constexpr auto SERIALISE_HEADER_MAGIC = "level";
