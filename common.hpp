@@ -32,6 +32,7 @@ enum GameActionDefs : GameAction {
 	ACTION_EDIT_MODE_DELETE_DEF,
 	ACTION_EDIT_MODE_TOGGLE_HELP_DEF,
 	ACTION_EDIT_MODE_SAVE_FILE_DEF,
+	ACTION_RESET_LEVEL_DEF,
 	ACTION_MAX
 };
 
@@ -56,6 +57,7 @@ const auto ACTION_EDIT_MODE_DECREASE_COARSE = GameActionFlag_FromAction(ACTION_E
 const auto ACTION_EDIT_MODE_DELETE = GameActionFlag_FromAction(ACTION_EDIT_MODE_DELETE_DEF);
 const auto ACTION_EDIT_MODE_TOGGLE_HELP = GameActionFlag_FromAction(ACTION_EDIT_MODE_TOGGLE_HELP_DEF);
 const auto ACTION_EDIT_MODE_SAVE_FILE = GameActionFlag_FromAction(ACTION_EDIT_MODE_SAVE_FILE_DEF);
+const auto ACTION_RESET_LEVEL = GameActionFlag_FromAction(ACTION_RESET_LEVEL_DEF);
 
 struct StringChomper {
     char* ptr;

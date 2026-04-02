@@ -121,6 +121,7 @@ void DefaultKeyBindings(EngineInputConfig* bindings) {
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_DELETE, KEY_MOUSE_MIDDLE_BUTTON);
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_TOGGLE_HELP, KEY_Q);
 	EngineInput_SetBinding(bindings, ACTION_EDIT_MODE_SAVE_FILE, KEY_N);
+	EngineInput_SetBinding(bindings, ACTION_RESET_LEVEL, KEY_DELETE);
 }
 //⠀⠀⠀⠀⠀⠸⣧⠀⢀⣴⣿⡛⠛⠛⠛⠛⠛⠛⠛⣛⣿⢷⣄⣼⠇⠀⠀⠀⠀
 //⠀⠀⠀⠀⠀⠀⠙⣷⡟⠁⠈⠻⢦⣤⣤⣤⡤⠶⠟⠋⠁⣠⡿⠃⠀⠀⠀⠀⠀	- "I like games and gaming and consoles and controllers and Call of Duty and Mario.
