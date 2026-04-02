@@ -1,5 +1,5 @@
 #include "engine_input.hpp"
-#include "../libtinyfiledialogs/tinyfiledialogs.h"
+#include "../tinyfiledialogs/tinyfiledialogs.h"
 #include <string.h>
 
 // shouts out tinyfd

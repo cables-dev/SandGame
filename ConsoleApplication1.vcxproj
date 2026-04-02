@@ -154,12 +154,12 @@
     <ClCompile Include="engine\engine_ioctl.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="engine\engine_input.cpp" />
-    <ClCompile Include="libtinyfiledialogs\tinyfiledialogs.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="render.cpp" />
     <ClCompile Include="sand_sim.cpp" />
     <ClCompile Include="serial.cpp" />
     <ClCompile Include="serialise.cpp" />
+    <ClCompile Include="tinyfiledialogs\tinyfiledialogs.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.hpp" />
@@ -172,12 +172,12 @@
     <ClInclude Include="engine\engine_ioctl.hpp" />
     <ClInclude Include="game.hpp" />
     <ClInclude Include="engine\engine_input.hpp" />
-    <ClInclude Include="libtinyfiledialogs\tinyfiledialogs.h" />
     <ClInclude Include="render.hpp" />
     <ClInclude Include="resource.hpp" />
     <ClInclude Include="sand_sim.hpp" />
     <ClInclude Include="serial.hpp" />
     <ClInclude Include="serialise.hpp" />
+    <ClInclude Include="tinyfiledialogs\tinyfiledialogs.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
