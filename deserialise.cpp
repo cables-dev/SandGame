@@ -116,7 +116,8 @@ void Level_ResetGame(
     std::uint32_t pit_screens_horizontal,
     std::uint32_t pit_screens_vertical,
     std::uint32_t sand_stubbornness,
-    bool do_tick
+    bool do_tick,
+    const char* file_path
 ) {
     // Reset state
     auto* last_level_buffer = game->level_buffer;
@@ -138,7 +139,8 @@ void Level_ResetGame(
         SAND_SIZE,
         DEFAULT_MAX_ENTITIES,
         persistent,
-        do_tick
+        do_tick,
+        file_path
     );
 
 	if (last_level_buffer != nullptr)
@@ -485,7 +487,8 @@ bool Level_LoadFile(
         pit_screens_horizontal,
         pit_screens_vertical,
         stubbornness,
-        do_tick
+        do_tick,
+        file_path
     );
 
     if (!Level_ProcessFile(audio, render, game, out_meta, &level_buffer, out_error)) {

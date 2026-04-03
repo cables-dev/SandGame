@@ -73,6 +73,7 @@ struct SandGame {
 	const char* toast = nullptr;
 	NEEDS_FREE const char* level_buffer = nullptr;  // The currently loaded level file. Must be kept alive so entities can reference internal strings like string toast messages. 
 	const char* new_level_path = nullptr;
+	const char* current_level_path = nullptr;
 	bool do_time_tick = true;
 };
 using SandGameForEachEntityFn_t = void(*)(Entity*);
@@ -91,7 +92,8 @@ void SandGame_Create(
 	std::uint16_t pit_grain_size,
 	std::uint32_t max_entities,
 	SandGamePersistentState* persistent = nullptr,
-	bool do_timer = true 
+	bool do_timer = true,
+	const char* loaded_level_path = nullptr
 );
 void SandGame_Destroy(SandGame* game, SandGamePersistentState** out_persistent_state);
 void SandGame_Destroy(SandGame* game);
@@ -104,10 +106,6 @@ void SandGame_ReceiveInput(
 );
 void SandGame_Update(
 	SandGame* game, 
-	GameActionFlags* pressed, 
-	GameActionFlags* held, 
-	int cursor_x, 
-	int cursor_y, 
 	EngineTime dt
 );
 void SandGame_ScreenCoordsToWorldCoords(

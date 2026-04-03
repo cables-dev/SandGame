@@ -518,6 +518,30 @@ void Render_RenderEditModeVariableColour(
 	}
 }
 
+void Render_RenderEditModeVariableBitwise(			// This could be made faster but roflsauce basically
+	RenderData* data,
+	EditModeVariableBitwise* var,
+	bool is_selected,
+	double x,
+	double y
+) {
+	auto x_cursor = x;
+	char bit_text_buffer[2]{};
+	EngineRender_DrawTextAbsolute(&data->engine, var->description, x_cursor, y, EDIT_MODE_VARIABLE_FONT_SIZE, &EDIT_MODE_VARIABLE_FONT_COLOUR);
+	x_cursor += EngineRender_MeasureTextWidth(&data->engine, var->description, EDIT_MODE_VARIABLE_FONT_SIZE) + 6;
+	for (int i = 0; i < var->msb_pos; i++) {
+		bit_text_buffer[0] = '\0';
+		bit_text_buffer[1] = '\0';
+
+		auto bit_selected = is_selected && EditModeVariableBitwise_IsBitSelected(var, i);
+		auto colour = bit_selected ? EDIT_MODE_VARIABLE_SELECTED_FONT_COLOUR : EDIT_MODE_VARIABLE_FONT_COLOUR;
+		auto bit = EditModeVariableBitwise_GetBitValue(var, i);
+		snprintf(bit_text_buffer, 2, "%d", bit);
+		EngineRender_DrawTextAbsolute(&data->engine, bit_text_buffer, x_cursor, y, EDIT_MODE_VARIABLE_FONT_SIZE, &colour);
+		x_cursor += EngineRender_MeasureTextWidth(&data->engine, bit_text_buffer, EDIT_MODE_VARIABLE_FONT_SIZE) + 2;
+	}
+}
+
 void Render_RenderEditModeVariable(
 	RenderData* data, 
 	EditModeVariable* var, 
@@ -534,6 +558,7 @@ void Render_RenderEditModeVariable(
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { Render_RenderEditModeVariableGraphicResource(data, &var->var.var_graphic_resource, is_selected, *in_out_x, *in_out_y); break; }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { Render_RenderEditModeVariableAudioResource(data, &var->var.var_audio_resource, is_selected, *in_out_x, *in_out_y); break; }
 	case EDIT_MODE_VAR_STRING: { Render_RenderEditModeVariableCString(data, &var->var.var_c_string, is_selected, *in_out_x, *in_out_y); break; }
+	case EDIT_MODE_VAR_BITWISE: { Render_RenderEditModeVariableBitwise(data, &var->var.var_bitwise, is_selected, *in_out_x, *in_out_y); break; }
 	default: { assert(false && "Render_RenderEditModeVariable: Unaccounted variable type encountered!"); }
 	}
 

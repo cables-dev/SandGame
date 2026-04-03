@@ -53,7 +53,7 @@ enum RenderFXFlag {
 	FX_MAX = 1 << 3 // Remeber to update me!
 };
 using GraphicResource = int;
-constexpr auto MAX_GRAPHIC_RESOURCES = 64;
+constexpr auto MAX_GRAPHIC_RESOURCES = 63;
 constexpr RenderFXFlags NULL_FX_FLAGS = 0;
 
 RenderFXFlag RenderFXFlag_FromResource(GraphicResource rsc);
@@ -80,11 +80,12 @@ void EngineBackground_Draw(EngineRenderData* data, const EngineBackground* bg, f
 struct EngineRenderData {
 	RenderCamera camera{};
 	EngineBackground background{};
+	GraphicResourceImage missing_texture;
 	char* toast = nullptr;						// Since callers might pass dynamically allocated strings with
 	float toast_display_duration = 0.0;			// no lifetime guarantee, we will make a local copy.
 	float white_flash_duration = 0.0;
 	float black_fade_in_out_duration = 0.0;
-	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES]{};
+	GraphicResourceOpt resources[MAX_GRAPHIC_RESOURCES + 1]{};
 };
 
 // TODO: ON WINDOW RESIZE (change camera pos, resize background)

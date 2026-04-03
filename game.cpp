@@ -363,7 +363,7 @@ void SandGame_DestroyEntityList(SandGame* game) {
 	game->entities_head = nullptr;
 }
 
-void SandGame_Create(SandGame* game, double player_x, double player_y, double player_w, double player_h, std::uint32_t pit_w, std::uint32_t pit_h, std::uint32_t pit_num_screens_horizontal, std::uint32_t pit_num_screens_vertical, std::uint32_t pit_stubbornness, std::uint16_t pit_grain_size, std::uint32_t max_entities, SandGamePersistentState* persistent, bool do_timer) {
+void SandGame_Create(SandGame* game, double player_x, double player_y, double player_w, double player_h, std::uint32_t pit_w, std::uint32_t pit_h, std::uint32_t pit_num_screens_horizontal, std::uint32_t pit_num_screens_vertical, std::uint32_t pit_stubbornness, std::uint16_t pit_grain_size, std::uint32_t max_entities, SandGamePersistentState* persistent, bool do_timer, const char* loaded_level_path) {
 	Player_Create(&game->player, player_x, player_y, player_w, player_h);
 	SandPit_Create(&game->pit, pit_w, pit_h, pit_num_screens_horizontal, pit_num_screens_vertical, pit_stubbornness, pit_grain_size);
 	SandGame_CreateEntityList(game, max_entities);
@@ -374,6 +374,7 @@ void SandGame_Create(SandGame* game, double player_x, double player_y, double pl
 	game->action_flags_pressed = NULL_ACTION_FLAGS;
 	game->action_flags_held = NULL_ACTION_FLAGS;
 	game->new_level_path = nullptr;
+	game->current_level_path = loaded_level_path;
 
 	if (persistent == nullptr) {
 		game->persistent = (SandGamePersistentState*)malloc(sizeof(SandGamePersistentState));
@@ -399,11 +400,18 @@ void SandGame_Destroy(SandGame* game) {
 	SandGame_DestroyEntityList(game);
 }
 
+// I forgot why this exists lul
+void SandGame_CommitInputFlags(SandGame* game, GameActionFlags* pressed, GameActionFlags* held) {
+	*pressed = game->action_flags_pressed;
+	*held = game->action_flags_held;
+}
+
 void SandGame_ReceiveInput(SandGame* game, GameActionFlags* pressed, GameActionFlags* held, int cursor_x, int cursor_y) {
 	game->action_flags_pressed = *pressed;
 	game->action_flags_held = *held;
 	game->cursor_x = cursor_x;
 	game->cursor_y = cursor_y;
+	SandGame_CommitInputFlags(game, pressed, held);
 }
 
 void UpdateSandPit(
@@ -456,12 +464,28 @@ void SandGame_HandleTimeElapse(SandGame* game, double dt_s) {
 		game->persistent->elapsed_s += dt_s;
 }
 
-void SandGame_CommitInputFlags(SandGame* game, GameActionFlags* pressed, GameActionFlags* held) {
-	*pressed = game->action_flags_pressed;
-	*held = game->action_flags_held;
+void SandGame_SetNewLevelPath(SandGame* game, const char* new_level_path) {
+	game->new_level_path = new_level_path;
 }
 
-void SandGame_Update(SandGame* game, GameActionFlags* pressed, GameActionFlags* held, int cursor_x, int cursor_y, EngineTime dt) {
+const char* SandGame_GetNewLevelPath(const SandGame* game) {
+	return game->new_level_path;
+}
+
+bool SandGame_ShouldLoadNewLevel(const SandGame* game) {
+	return SandGame_GetNewLevelPath(game) != nullptr && !SandGame_IsFrozen(game);
+}
+
+
+bool SandGame_ShouldReloadLevel(SandGame* game) {
+	return GameActionFlags_Get(game->action_flags_pressed, ACTION_RESET_LEVEL);
+}
+
+void SandGame_SetReloadLevel(SandGame* game) {
+	SandGame_SetNewLevelPath(game, game->current_level_path);
+}
+
+void SandGame_Update(SandGame* game, EngineTime dt) {
 	auto dt_s = dt.seconds;
 	std::uint32_t sector_x = 0;
 	std::uint32_t sector_y = 0;
@@ -481,6 +505,11 @@ void SandGame_Update(SandGame* game, GameActionFlags* pressed, GameActionFlags* 
 
 	if (SandGame_IsFrozen(game) || first_frame || dt_s >= 0.1)			// If we are running under 10 fps just don't bother
 		return;
+
+	if (SandGame_ShouldReloadLevel(game)) {
+		SandGame_SetReloadLevel(game);
+		return;
+	}
 
 	player_bbox = game->player.bbox;						// We make a copy since we are going to scale it.
 	player_w = AABB_GetWidth(&player_bbox);
@@ -514,7 +543,6 @@ void SandGame_Update(SandGame* game, GameActionFlags* pressed, GameActionFlags* 
 		dt_s
 	);
 	SandGame_ThinkEntities(game, dt_s);
-	SandGame_CommitInputFlags(game, pressed, held);
 }
 
 void SandGame_ScreenCoordsToWorldCoords(const SandGame* game, int screen_x, int screen_y, int* out_world_x, int* out_world_y) {
@@ -559,18 +587,6 @@ void SandGame_ForEachEntity(const SandGame* game, SandGameForEachEntityFn_t cb) 
 
 void SandGame_SetSFXFlag(SandGame* game, SoundFXFlag sfx, bool to) {
 	SoundFXFlags_Set(&game->sfx_flags, sfx, to);
-}
-
-void SandGame_SetNewLevelPath(SandGame* game, const char* new_level_path) {
-	game->new_level_path = new_level_path;
-}
-
-const char* SandGame_GetNewLevelPath(const SandGame* game) {
-	return game->new_level_path;
-}
-
-bool SandGame_ShouldLoadNewLevel(const SandGame* game) {
-	return SandGame_GetNewLevelPath(game) != nullptr && !SandGame_IsFrozen(game);
 }
 
 void SandGame_NotifyLevelLoaded(SandGame* game) {

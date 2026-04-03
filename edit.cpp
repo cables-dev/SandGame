@@ -131,6 +131,49 @@ void EditModeVariableAudioResource_DecreaseFine(EditModeVariableAudioResource* v
 bool EditModeVariableAudioResource_OnSelectNext(EditModeVariableAudioResource* var) { return true; }			// Return true if we permit the parent to cycle to the next variable
 bool EditModeVariableAudioResource_OnSelectPrev(EditModeVariableAudioResource* var) { return true; }			// Return true if we permit the parent to cycle to the next variable
 
+void EditModeVariableBitwise_Create(EditModeVariableBitwise* var, const char* description, int* ptr, int msb_pos) {
+	assert(ptr);				// So we don't have to do a nullptr check on every funtion call
+	var->item = ptr;
+	var->msb_pos = msb_pos;
+	var->description = description;
+}
+void EditModeVariableBitwise_Destroy(EditModeVariableBitwise* var) { /*pass*/ }
+bool EditModeVariableBitwise_GetBitValue(EditModeVariableBitwise* var, int bit_pos) {
+	if (bit_pos >= var->msb_pos)
+		return false;
+	return *var->item & (1 << bit_pos);
+}
+void EditModeVariableBitwise_SetBitValue(EditModeVariableBitwise* var, int bit_pos, bool to) {
+	if (bit_pos >= var->msb_pos)
+		return;
+	if (to)
+		*var->item |= (1 << bit_pos);
+	else
+		*var->item &= ~(1 << bit_pos);
+}
+bool EditModeVariableBitwise_GetSelectedBit(EditModeVariableBitwise* var) { return EditModeVariableBitwise_GetBitValue(var, var->cursor_idx); }
+void EditModeVariableBitwise_SetSelectedBit(EditModeVariableBitwise* var, bool to) { EditModeVariableBitwise_SetBitValue(var, var->cursor_idx, to); }
+void EditModeVariableBitwise_ToggleSelectedBit(EditModeVariableBitwise* var) { EditModeVariableBitwise_SetBitValue(var, var->cursor_idx, !EditModeVariableBitwise_GetSelectedBit(var)); }
+bool EditModeVariableBitwise_IsBitSelected(EditModeVariableBitwise* var, int bit_idx) {
+	return bit_idx == var->cursor_idx;
+}
+void EditModeVariableBitwise_IncreaseFine(EditModeVariableBitwise* var) { EditModeVariableBitwise_ToggleSelectedBit(var); }
+void EditModeVariableBitwise_IncreaseCoarse(EditModeVariableBitwise* var) { EditModeVariableBitwise_ToggleSelectedBit(var); }
+void EditModeVariableBitwise_DecreaseFine(EditModeVariableBitwise* var) { EditModeVariableBitwise_ToggleSelectedBit(var); }
+void EditModeVariableBitwise_DecreaseCoarse(EditModeVariableBitwise* var) { EditModeVariableBitwise_ToggleSelectedBit(var); }
+bool EditModeVariableBitwise_OnSelectNext(EditModeVariableBitwise* var) { 
+	auto result = var->cursor_idx == var->msb_pos - 1;
+	if (!result)
+		var->cursor_idx = (var->cursor_idx + 1) % var->msb_pos;		
+	return result;
+}			// Return true if we permit the parent to cycle to the next variable
+bool EditModeVariableBitwise_OnSelectPrev(EditModeVariableBitwise* var) { 
+	auto result = var->cursor_idx == 0;
+	if (!result)
+		var->cursor_idx = (var->cursor_idx - 1) % var->msb_pos;
+	return result;
+}			// Return true if we permit the parent to cycle to the next variable
+
 void EditModeVariableCString_Create(EditModeVariableCString* var, const char* description, char** ptr) {
 	assert(ptr);				// So we don't have to do a nullptr check on every funtion call
 	var->item = ptr;
@@ -166,6 +209,7 @@ void EditModeVariable_CreateFrom(EditModeVariable* edit_var, void* var, EditMode
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableGraphicResource)); break; }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableAudioResource)); break; } 
 	case EDIT_MODE_VAR_STRING: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableCString)); break; } 	
+	case EDIT_MODE_VAR_BITWISE: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableBitwise)); break; } 	
 	default: { assert(false && "EditModeVariable_CreateFrom: Unaccounted variable type encountered!"); }
 	}
 	edit_var->type = type;
@@ -183,6 +227,7 @@ void EditModeVariable_CreateFrom(EditModeVariable* edit_var, void* var, EditMode
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableGraphicResource)); break; }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableAudioResource)); break; } 
 	case EDIT_MODE_VAR_STRING: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableCString)); break; } 	
+	case EDIT_MODE_VAR_BITWISE: { memcpy_s(&edit_var->var, sizeof(edit_var->var), var, sizeof(EditModeVariableBitwise)); break; } 	
 	default: { assert(false && "EditModeVariable_CreateFrom: Unaccounted variable type encountered!"); }
 	}
 	edit_var->type = type;
@@ -200,6 +245,7 @@ bool EditModeVariable_OnSelectNext(EditModeVariable* var) {
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { return EditModeVariableGraphicResource_OnSelectNext(&var->var.var_graphic_resource); }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { return EditModeVariableAudioResource_OnSelectNext(&var->var.var_audio_resource); }
 	case EDIT_MODE_VAR_STRING: { return EditModeVariableCString_OnSelectNext(&var->var.var_c_string); }
+	case EDIT_MODE_VAR_BITWISE: { return EditModeVariableBitwise_OnSelectNext(&var->var.var_bitwise); }
 	default: { assert(false && "EditModeVariable_OnSelectNext: Unaccounted variable type encountered!"); }
 	}
 }
@@ -213,6 +259,7 @@ bool EditModeVariable_OnSelectPrev(EditModeVariable* var) {
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { return EditModeVariableGraphicResource_OnSelectPrev(&var->var.var_graphic_resource); }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { return EditModeVariableAudioResource_OnSelectPrev(&var->var.var_audio_resource); }
 	case EDIT_MODE_VAR_STRING: { return EditModeVariableCString_OnSelectPrev(&var->var.var_c_string); }
+	case EDIT_MODE_VAR_BITWISE: { return EditModeVariableBitwise_OnSelectPrev(&var->var.var_bitwise); }
 	default: { assert(false && "EditModeVariable_OnSelectPrev: Unaccounted variable type encountered!"); }
 	}
 }
@@ -226,6 +273,7 @@ void EditModeVariable_IncreaseFine(EditModeVariable* var) {
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { EditModeVariableGraphicResource_IncreaseFine(&var->var.var_graphic_resource); break; } 
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { EditModeVariableAudioResource_IncreaseFine(&var->var.var_audio_resource); break; }
 	case EDIT_MODE_VAR_STRING: { EditModeVariableCString_IncreaseFine(&var->var.var_c_string); break; }
+	case EDIT_MODE_VAR_BITWISE: { EditModeVariableBitwise_IncreaseFine(&var->var.var_bitwise); break; }
 	default: { assert(false && "EditModeVariable_IncreaseFine: Unaccounted variable type encountered!"); }
 	}
 }
@@ -239,6 +287,7 @@ void EditModeVariable_IncreaseCoarse(EditModeVariable* var) {
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { EditModeVariableGraphicResource_IncreaseCoarse(&var->var.var_graphic_resource); break; }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { EditModeVariableAudioResource_IncreaseCoarse(&var->var.var_audio_resource); break; }
 	case EDIT_MODE_VAR_STRING: { EditModeVariableCString_IncreaseCoarse(&var->var.var_c_string); break; }
+	case EDIT_MODE_VAR_BITWISE: { EditModeVariableBitwise_IncreaseCoarse(&var->var.var_bitwise); break; }
 	default: { assert(false && "EditModeVariable_IncreaseCoarse: Unaccounted variable type encountered!"); }
 	}
 }
@@ -252,6 +301,7 @@ void EditModeVariable_DecreaseFine(EditModeVariable* var) {
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { EditModeVariableGraphicResource_DecreaseFine(&var->var.var_graphic_resource); break; }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { EditModeVariableAudioResource_DecreaseFine(&var->var.var_audio_resource); break; } 
 	case EDIT_MODE_VAR_STRING: { EditModeVariableCString_DecreaseFine(&var->var.var_c_string); break; }
+	case EDIT_MODE_VAR_BITWISE: { EditModeVariableBitwise_DecreaseFine(&var->var.var_bitwise); break; }
 	default: { assert(false && "EditModeVariable_DecreaseFine: Unaccounted variable type encountered!"); }
 	}
 }
@@ -265,6 +315,7 @@ void EditModeVariable_DecreaseCoarse(EditModeVariable* var) {
 	case EDIT_MODE_VAR_GRAPHIC_RESOURCE: { EditModeVariableGraphicResource_DecreaseCoarse(&var->var.var_graphic_resource); break; }
 	case EDIT_MODE_VAR_AUDIO_RESOURCE: { EditModeVariableAudioResource_DecreaseCoarse(&var->var.var_audio_resource); break; }
 	case EDIT_MODE_VAR_STRING: { EditModeVariableCString_DecreaseCoarse(&var->var.var_c_string); break; }
+	case EDIT_MODE_VAR_BITWISE: { EditModeVariableBitwise_DecreaseCoarse(&var->var.var_bitwise); break; }
 	default: { assert(false && "EditModeVariable_DecreaseCoarse: Unaccounted variable type encountered!"); }
 	}
 }
@@ -309,7 +360,7 @@ void EditMode_CreateEntitySelection(EditModeData* data) {
 	selections[ENTITY_RECTANGLE].ent = Entity_CreateFrom(&rect, ENTITY_RECTANGLE);
 
 	EntityHintBox hint;
-	HintBox_Create(&hint, "Edit me in file!", false, 0.0, 0.0, 50.0, 50.0);
+	HintBox_Create(&hint, "Edit me!", false, 0.0, 0.0, 50.0, 50.0);
 	selections[ENTITY_HINT_BOX].ent = Entity_CreateFrom(&hint, ENTITY_HINT_BOX);
 
 	EntityBarrel barrel;
@@ -317,7 +368,7 @@ void EditMode_CreateEntitySelection(EditModeData* data) {
 	selections[ENTITY_BARREL].ent = Entity_CreateFrom(&barrel, ENTITY_BARREL);
 
 	EntityLevelDoor door;
-	LevelDoor_Create(&door, 0.0, 0.0, 50, 100, "nowhere.sg", -1, -1);
+	LevelDoor_Create(&door, 0.0, 0.0, 50, 100, "nowhere.sg", GRAPHIC_RSC_DOOR, 0, 0);
 	selections[ENTITY_LEVEL_DOOR].ent = Entity_CreateFrom(&door, ENTITY_LEVEL_DOOR);
 
 	EntityLadybird ladybird;
@@ -339,19 +390,24 @@ void EditMode_SetupRectangleVariables(EditModeData* data) {
 	EditModeVariableDouble width_var_inner;
 	EditModeVariableDouble height_var_inner;
 	EditModeVariableColour colour_var_inner;
+	EditModeVariableGraphicResource rsc_var_inner;
 	EditModeVariable* width_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* height_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* colour_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
+	EditModeVariable* rsc_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariableDouble_Create(&width_var_inner, "Width: ", &rect_ent->aabb.w, false, SAND_SIZE);
 	EditModeVariableDouble_Create(&height_var_inner, "Height : ", &rect_ent->aabb.h, false, SAND_SIZE);
 	EditModeVariableColour_Create(&colour_var_inner, "Colour : ", &rect_ent->colour);
+	EditModeVariableGraphicResource_Create(&rsc_var_inner, "Sprite: ", &rect_ent->graphic);
 	EditModeVariable_CreateFrom(width_var, &width_var_inner, EDIT_MODE_VAR_DOUBLE);
 	EditModeVariable_CreateFrom(height_var, &height_var_inner, EDIT_MODE_VAR_DOUBLE);
 	EditModeVariable_CreateFrom(colour_var, &colour_var_inner, EDIT_MODE_VAR_COLOUR);
+	EditModeVariable_CreateFrom(rsc_var, &rsc_var_inner, EDIT_MODE_VAR_GRAPHIC_RESOURCE);
 
 	EditMode_InitVariableList(data, width_var, rect_index);
 	EditMode_PushVariableToList(data, height_var, rect_index);
 	EditMode_PushVariableToList(data, colour_var, rect_index);
+	EditMode_PushVariableToList(data, rsc_var, rect_index);
 }
 
 void EditMode_SetupHintBoxVariables(EditModeData* data) {
@@ -361,23 +417,28 @@ void EditMode_SetupHintBoxVariables(EditModeData* data) {
 	EditModeVariableDouble height_var_inner;
 	EditModeVariableBoolean only_once_inner;
 	EditModeVariableAudioResource audio_rsc_inner;
+	EditModeVariableCString popup_text_inner;
 	EditModeVariable* width_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* height_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* only_once_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* audio_rsc_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
+	EditModeVariable* popup_text_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariableDouble_Create(&width_var_inner, "Width: ", &hint_ent->aabb.w, false, SAND_SIZE);
 	EditModeVariableDouble_Create(&height_var_inner, "Height : ", &hint_ent->aabb.h, false, SAND_SIZE);
 	EditModeVariableBoolean_Create(&only_once_inner, "Trigger Only Once: ", &hint_ent->only_once);
 	EditModeVariableAudioResource_Create(&audio_rsc_inner, "Sound Effect: ", &hint_ent->audio_rsc);
+	EditModeVariableCString_Create(&popup_text_inner, "Hint: ", (char**)&hint_ent->message);
 	EditModeVariable_CreateFrom(width_var, &width_var_inner, EDIT_MODE_VAR_DOUBLE);
 	EditModeVariable_CreateFrom(height_var, &height_var_inner, EDIT_MODE_VAR_DOUBLE);
 	EditModeVariable_CreateFrom(only_once_var, &only_once_inner, EDIT_MODE_VAR_BOOLEAN);
 	EditModeVariable_CreateFrom(audio_rsc_var, &audio_rsc_inner, EDIT_MODE_VAR_AUDIO_RESOURCE);
+	EditModeVariable_CreateFrom(popup_text_var, &popup_text_inner, EDIT_MODE_VAR_STRING);
 
 	EditMode_InitVariableList(data, width_var, hint_index);
 	EditMode_PushVariableToList(data, height_var, hint_index);
 	EditMode_PushVariableToList(data, only_once_var, hint_index);
 	EditMode_PushVariableToList(data, audio_rsc_var, hint_index);
+	EditMode_PushVariableToList(data, popup_text_var, hint_index);
 }
 
 void EditMode_SetupBarrelVariables(EditModeData* data) {
@@ -407,19 +468,29 @@ void EditMode_SetupLevelDoorVariables(EditModeData* data) {
 	EditModeVariableDouble width_var_inner;
 	EditModeVariableDouble height_var_inner;
 	EditModeVariableCString next_level_path_inner;
+	EditModeVariableBitwise lock_flags_inner;
+	EditModeVariableBitwise unlock_flags_inner;
 	EditModeVariable* width_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* height_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariable* next_level_path_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
+	EditModeVariable* lock_flags_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
+	EditModeVariable* unlock_flags_var = (EditModeVariable*)malloc(sizeof(EditModeVariable));
 	EditModeVariableDouble_Create(&width_var_inner, "Width: ", &door_ent->aabb.w, false, SAND_SIZE);
 	EditModeVariableDouble_Create(&height_var_inner, "Height: ", &door_ent->aabb.h, false, SAND_SIZE);
 	EditModeVariableCString_Create(&next_level_path_inner, "Next Level File: ", (char**)&door_ent->next_level_path);
+	EditModeVariableBitwise_Create(&lock_flags_inner, "Lock Flags: ", &door_ent->lock_flag, 32);
+	EditModeVariableBitwise_Create(&unlock_flags_inner, "Unlock Flags: ", &door_ent->unlock_flag, 32);
 	EditModeVariable_CreateFrom(width_var, &width_var_inner, EDIT_MODE_VAR_DOUBLE);
 	EditModeVariable_CreateFrom(height_var, &height_var_inner, EDIT_MODE_VAR_DOUBLE);
 	EditModeVariable_CreateFrom(next_level_path_var, &next_level_path_inner, EDIT_MODE_VAR_STRING);
+	EditModeVariable_CreateFrom(lock_flags_var, &lock_flags_inner, EDIT_MODE_VAR_BITWISE);
+	EditModeVariable_CreateFrom(unlock_flags_var, &unlock_flags_inner, EDIT_MODE_VAR_BITWISE);
 
 	EditMode_InitVariableList(data, width_var, door_index);
 	EditMode_PushVariableToList(data, height_var, door_index);
 	EditMode_PushVariableToList(data, next_level_path_var, door_index);
+	EditMode_PushVariableToList(data, lock_flags_var, door_index);
+	EditMode_PushVariableToList(data, unlock_flags_var, door_index);
 }
 
 void EditMode_SetupVariables(EditModeData* data) {
@@ -547,7 +618,7 @@ void EditMode_OnSelectNextVariable(EditModeData* data) {
 
 	auto ent_index = data->selected_ent_index;
 	auto* current_var = EditMode_GetSelectedEntityVariablesSelectedVariable(data);
-	if (EditModeVariable_OnSelectNext(current_var)) {			// Permission to cycle?
+	if (current_var && EditModeVariable_OnSelectNext(current_var)) {			// Permission to cycle?
 		data->ent_variable_list_selections[ent_index] = current_var->next;
 		//current_var = 
 	}
@@ -559,7 +630,7 @@ void EditMode_OnSelectPrevVariable(EditModeData* data) {
 
 	auto ent_index = data->selected_ent_index;
 	auto* current_var = data->ent_variable_list_selections[ent_index];
-	if (EditModeVariable_OnSelectPrev(current_var)) {			// Permission to cycle?
+	if (current_var && EditModeVariable_OnSelectPrev(current_var)) {			// Permission to cycle?
 		data->ent_variable_list_selections[ent_index] = current_var->prev;
 	}
 }

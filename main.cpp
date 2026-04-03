@@ -66,7 +66,7 @@ int main()
 		EngineInput_FetchState(&bindings, &pressed_actions, &held_actions, &cursor_x, &cursor_y);
 		EditMode_ReceiveInput(&edit, &pressed_actions, &held_actions, cursor_x, cursor_y);
 		SandGame_ReceiveInput(&game, &pressed_actions, &held_actions, cursor_x, cursor_y);
-		SandGame_Update(&game, &pressed_actions, &held_actions, cursor_x, cursor_y, dt);
+		SandGame_Update(&game, dt);
 		EditMode_Update(&edit, &game, &md, dt);
 
 		Render_Begin(&render_data);

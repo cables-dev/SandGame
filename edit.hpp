@@ -41,6 +41,14 @@ struct EditModeVariableCString {
 	char** item = nullptr;							// Good enough for our purposes.
 	bool needs_free = false;
 };
+struct EditModeVariableBitwise {
+	const char* description = nullptr;				
+	int* item = nullptr;				
+	int msb_pos = 32;
+	int cursor_idx = 0;
+};
+bool EditModeVariableBitwise_IsBitSelected(EditModeVariableBitwise* var, int bit_idx);
+bool EditModeVariableBitwise_GetBitValue(EditModeVariableBitwise* var, int bit_pos);
 
 enum EditModeVariableType {
 	EDIT_MODE_VAR_DOUBLE,
@@ -51,6 +59,7 @@ enum EditModeVariableType {
 	EDIT_MODE_VAR_GRAPHIC_RESOURCE,
 	EDIT_MODE_VAR_AUDIO_RESOURCE,
 	EDIT_MODE_VAR_STRING,
+	EDIT_MODE_VAR_BITWISE,
 	EDIT_MODE_VAR_MAX
 };
 
@@ -64,6 +73,7 @@ struct EditModeVariable {
 		EditModeVariableGraphicResource var_graphic_resource;
 		EditModeVariableAudioResource var_audio_resource;
 		EditModeVariableCString var_c_string;
+		EditModeVariableBitwise var_bitwise;
 	} var;
 	EditModeVariableType type;
 	EditModeVariable* prev = nullptr;
